@@ -213,7 +213,7 @@ export const $settings = domain.createStore<IDashboardSetting>({
 
 export const $store = domain.createStore<IStore>({
   showSider: false,
-  periods: [{ value: "THIS_YEAR", label: "This Year", type: "relative" }],
+  periods: [{ value: "LAST_YEAR", label: "Last Year", type: "relative" }],
   organisations: [],
   levels: [],
   groups: [],
