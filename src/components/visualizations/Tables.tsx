@@ -190,7 +190,6 @@ import { columnTree } from "../../utils/components";
 import { SPECIAL_COLUMNS } from "../constants";
 import { processTable } from "../processors";
 import { Workbook } from "exceljs";
-import type { Column as Col } from "exceljs";
 import { saveAs } from "file-saver";
 import { utils } from "xlsx";
 
@@ -198,9 +197,8 @@ const Tables = ({ visualization, data, dimensions, others }: ChartProps) => {
   const [squareRef, { height, width }] = useElementSize();
   const flattenedData = flatten(data);
   const rows = String(visualization.properties?.["rows"] ?? "").split(",");
-  const columns = String(visualization.properties?.["columns"] ?? "").split(
-    ","
-  );
+  const columns = String(visualization.properties?.["columns"] ?? "").split(",");
+
 
   const thresholds: Threshold[] =
     visualization.properties?.["data.thresholds"] ?? [];
@@ -225,19 +223,18 @@ const Tables = ({ visualization, data, dimensions, others }: ChartProps) => {
       visualization.properties
     )
   );
-  const real: Array<ColumnsType<any>> = columns.map((a) => {
+
+  const real: any[] = columns.map((a) => {
     return uniq(data.map((d: any) => d[a]))
       .filter((d: any) => !!d)
-      .map((d) => {
-        return {
-          title: visualization.properties[`${String(d)}.name`] || String(d),
-          dataIndex: String(d),
-          key: String(d),
-        };
-      });
+      .map((d) => ({
+        title: visualization.properties[`${String(d)}.name`] || String(d),
+        dataIndex: String(d),
+        key: String(d),
+      }));
   });
 
-  const [available, setAvailable] = useState<ColumnsType<any>>([]);
+  const [available, setAvailable] = useState<any[]>([]);
 
   useEffect(() => {
     setInitial(() =>
@@ -253,44 +250,43 @@ const Tables = ({ visualization, data, dimensions, others }: ChartProps) => {
         visualization.properties
       )
     );
+
     const allColumns = columnTree(real, visualization.properties);
-    const othersColumns: ColumnsType<any> = rows.map((d, index) => {
-      return {
-        title: visualization.properties[`${d}.name`] || d,
-        key: String(d),
-        fixed: "left",
-        render: (text, data) => {
-          const value = data[String(d)];
-          return visualization.properties[`${value}.name`] || value;
-        },
-        onCell: (data, index) => {
-          const value = data[String(d)];
-          const obj: any = {
-            flex: 1,
-          };
-          if (index !== undefined) {
-            if (
-              index >= 1 &&
-              initial.finalData[index - 1] &&
-              value === initial.finalData[index - 1][d]
+
+    const othersColumns: ColumnsType<any> = rows.map((d) => ({
+      title: visualization.properties[`${d}.name`] || d,
+      key: String(d),
+      fixed: "left",
+      render: (text, data) => {
+        const value = data[String(d)];
+        return visualization.properties[`${value}.name`] || value;
+      },
+      onCell: (data, index) => {
+        const value = data[String(d)];
+        const obj: any = { flex: 1 };
+        if (index !== undefined) {
+          if (
+            index >= 1 &&
+            initial.finalData[index - 1] &&
+            value === initial.finalData[index - 1][d]
+          ) {
+            obj.rowSpan = 0;
+          } else {
+            for (
+              let i = 0;
+              index + i !== initial.finalData.length &&
+              initial.finalData[index + i] &&
+              value === initial.finalData[index + i][d];
+              i += 1
             ) {
-              obj.rowSpan = 0;
-            } else {
-              for (
-                let i = 0;
-                index + i !== initial.finalData.length &&
-                initial.finalData[index + i] &&
-                value === initial.finalData[index + i][d];
-                i += 1
-              ) {
-                obj.rowSpan = i + 1;
-              }
+              obj.rowSpan = i + 1;
             }
           }
-          return obj;
-        },
-      };
-    });
+        }
+        return obj;
+      },
+    }));
+
     const specialColumns: ColumnsType<any> = columns
       .filter((c) => SPECIAL_COLUMNS.indexOf(c) !== -1)
       .map((c) => ({
@@ -302,82 +298,71 @@ const Tables = ({ visualization, data, dimensions, others }: ChartProps) => {
         align: "center",
         render: (text, data) => data[String(c)],
       }));
-    console.log(othersColumns, specialColumns, allColumns);
+
     setAvailable(() => [...othersColumns, ...specialColumns, ...allColumns[0]]);
   }, [JSON.stringify(visualization.properties)]);
 
   const downloadAsExcel = () => {
     const workbook = new Workbook();
     const worksheet = workbook.addWorksheet("Table Data");
+
+    console.log("Maybe Available columns:", available);
+    console.log("Data i need:", initial.finalData[0]);
+
     const headerRow = available
-      .map((a, index) => {
+      .map((col, index) => {
         if (index > 1) {
-          return [0, 1, 2].map(() => a.title);
+          return ["Achieved", "Commenced", "Not Implemented"].map(() => col.title);
         }
-        return a.title;
+        return col.title;
       })
       .flat();
-
     worksheet.addRow(headerRow);
 
-    const firstRow = available
-      .map((a, index) => {
+    const secondRow = available
+      .map((col, index) => {
         if (index > 1) {
-          return [0, 1, 2].map((index) => {
-            if (index === 0) {
-              return "Achieved";
-            }
-            if (index === 1) {
-              return "Commenced";
-            }
-            if (index === 2) {
-              return "Not Implemented";
-            }
-          });
+          return ["Achieved", "Commenced", "Not Implemented"];
         }
         return "";
       })
       .flat();
-    worksheet.addRow(firstRow);
+    worksheet.addRow(secondRow);
 
-    initial.finalData.forEach((row) => {
-      const rowData = available
-        .map((col, index) => {
-          if (index > 1) {
-            return [0, 1, 2].map((index) => {
-              if (index === 0) {
-                return 0;
-              }
-              if (index === 1) {
-                return 1;
-              }
-              if (index === 2) {
-                return 2;
-              }
-            });
-          }
-          return row[col.key ?? ""] || "";
-        })
-        .flat();
+    console.log(initial.finalColumns)
+
+    const specialColumns: string[] = columns
+      .filter((c) => SPECIAL_COLUMNS.indexOf(c) !== -1)
+
+    initial.finalData.forEach((row, rowIndex) => {
+      const actualData = initial.finalColumns[initial.finalColumns.length - 1].map((col) => {
+        return row[col.value];
+
+      });
+      const others = rows.concat(specialColumns).map((col) => {
+        return row[col]
+      });
+
+      const rowData = [...others, ...actualData]
 
       worksheet.addRow(rowData);
     });
 
-    let addtion = 0;
-    available.forEach((a, index) => {
+    let colIndex = 0;
+    available.forEach((col, index) => {
       if (index > 1) {
-        [0, 1, 2].forEach((index1) => {
-          const color1 = utils.encode_cell({ r: 1, c: index + index1 });
-          const cell = worksheet.getCell(color1);
-          cell.value = "Colored Cell";
+        ["00FF00", "FFFF00", "FF0000"].forEach((color) => {
+          const cellAddress = utils.encode_cell({ r: 1, c: colIndex });
+          const cell = worksheet.getCell(cellAddress);
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFFF00" }, // Yellow
+            fgColor: { argb: color },
           };
+          colIndex++;
         });
-
-        addtion = addtion + 2;
+      } else {
+        colIndex++;
       }
     });
 
