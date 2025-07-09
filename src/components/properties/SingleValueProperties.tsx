@@ -79,11 +79,44 @@ const SingleValueProperties = ({
                 })
         );
 
-        return () => {};
+        return () => { };
     }, [visualization.properties["aggregationColumn"]]);
 
     return (
         <Stack spacing="20px" pb="10px">
+            <SwitchProperty
+                visualization={visualization}
+                title="Show Value Circle"
+                attribute="data.showCircle"
+            />
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={500}
+                step={1}
+                attribute="data.circleSize"
+                title="Circle Size (px)"
+            />
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={20}
+                step={1}
+                attribute="data.circleThickness"
+                title="Circle Border Thickness (px)"
+            />
+            <SwitchProperty
+                visualization={visualization}
+                title="Dotted Border"
+                attribute="data.circleDotted"
+            />
+            <Stack>
+                <Text>Circle Color</Text>
+                <ColorPalette
+                    visualization={visualization}
+                    attribute="data.circleColor"
+                />
+            </Stack>
             <SwitchProperty
                 visualization={visualization}
                 title="Aggregate"
@@ -204,7 +237,7 @@ const SingleValueProperties = ({
             />
             <NumberProperty
                 visualization={visualization}
-                max={4}
+                max={1000}
                 min={0}
                 step={1}
                 attribute="data.format.spacing"
@@ -216,6 +249,65 @@ const SingleValueProperties = ({
                 visualization={visualization}
                 title="Suffix"
                 attribute="data.suffix"
+            />
+            <TextProperty
+                visualization={visualization}
+                title="Secondary Target Query"
+                attribute="data.secondaryTarget"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Secondary Target Position"
+                attribute="data.secondaryTargetPosition"
+                options={progressAlignments}
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.secondaryTargetSpacing"
+                title="Secondary Target Spacing (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={8}
+                max={100}
+                step={1}
+                attribute="data.secondaryTargetFontSize"
+                title="Secondary Target Font Size (px)"
+            />
+            <NumberProperty
+                visualization={visualization}
+                min={100}
+                max={900}
+                step={100}
+                attribute="data.secondaryTargetFontWeight"
+                title="Secondary Target Font Weight"
+            />
+
+            <Stack>
+                <Text>Secondary Target Color</Text>
+                <ColorPalette
+                    visualization={visualization}
+                    attribute="data.secondaryTargetColor"
+                />
+            </Stack>
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={10}
+                step={1}
+                attribute="data.secondaryTargetDecimalPlaces"
+                title="Secondary Target Decimals"
+            />
+            <SwitchProperty
+                visualization={visualization}
+                title="Bracket Secondary Target"
+                attribute="data.secondaryTargetBracketed"
             />
             <Stack>
                 <Text>Target</Text>

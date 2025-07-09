@@ -647,6 +647,11 @@ export const processGraphs = (
     update(availableProperties, "data.orientation", () => "v");
     const specific: string[] = options.dataProperties?.["specific"] || [];
     const decimalPlaces = options.dataProperties?.["decimalPlaces"] || "0";
+    const commaSep = Boolean(options.dataProperties?.["data.commaSeparated"]);
+    const fmt = `${commaSep ? "," : ""}.${decimalPlaces}f`;
+
+
+
     const percentages: boolean =
         options.dataProperties?.["percentages"] || false;
     const overall: boolean = options.dataProperties?.["overall"] || false;
@@ -693,10 +698,10 @@ export const processGraphs = (
                                     .map((k) =>
                                         breakString(
                                             options.metadata[`${k}.name`] ||
-                                                options.dataProperties[
-                                                    `${k}.name`
-                                                ] ||
-                                                k,
+                                            options.dataProperties[
+                                            `${k}.name`
+                                            ] ||
+                                            k,
                                             25
                                         )
                                     ),
@@ -720,7 +725,7 @@ export const processGraphs = (
                                                 groupedByCategory[k].filter(
                                                     (x) =>
                                                         x[
-                                                            options.series || ""
+                                                        options.series || ""
                                                         ] === key
                                                 ).length
                                             );
@@ -733,9 +738,9 @@ export const processGraphs = (
                                 textposition: "auto",
                                 texttemplate:
                                     availableProperties?.data?.orientation ===
-                                    "v"
-                                        ? `%{y:.${decimalPlaces}f}`
-                                        : `%{x:.${decimalPlaces}f}`,
+                                        "v"
+                                        ? `%{y:${fmt}}`
+                                        : `%{x:${fmt}}`,
                                 ...others,
                             };
                         }
@@ -746,14 +751,13 @@ export const processGraphs = (
                     return {
                         x: Object.keys(groupedByCategory)
                             .sort()
-                            .map((k) =>
-                                breakString(
-                                    options.metadata[`${k}.name`] ||
-                                        options.dataProperties[`${k}.name`] ||
-                                        k,
-                                    25
-                                )
-                            ),
+                            .map((k) => {
+                                const renamed = options.dataProperties?.[`${k}.name`];
+                                const original = options.metadata?.[k]?.name;
+                                const label = renamed || original || k;
+
+                                return breakString(label, 25);
+                            }),
                         y: Object.keys(groupedByCategory)
                             .sort()
                             .map((k) => {
@@ -783,8 +787,8 @@ export const processGraphs = (
                         textposition: "auto",
                         texttemplate:
                             availableProperties?.data?.orientation === "v"
-                                ? `%{y:.${decimalPlaces}f}`
-                                : `%{x:.${decimalPlaces}f}`,
+                                ? `%{y:${fmt}}`
+                                : `%{x:${fmt}}`,
                         ...others,
                     };
                 });
@@ -813,8 +817,8 @@ export const processGraphs = (
                             .map((k) =>
                                 breakString(
                                     options.metadata[`${k}.name`] ||
-                                        options.dataProperties[`${k}.name`] ||
-                                        k,
+                                    options.dataProperties[`${k}.name`] ||
+                                    k,
                                     25
                                 )
                             ),
@@ -824,8 +828,8 @@ export const processGraphs = (
                         textposition: "auto",
                         texttemplate:
                             availableProperties?.data?.orientation === "v"
-                                ? `%{y:.${decimalPlaces}f}`
-                                : `%{x:.${decimalPlaces}f}`,
+                                ? `%{y:${fmt}}`
+                                : `%{x:${fmt}}`,
                     },
                 ];
                 allSeries = Object.keys(grouped2);
@@ -857,25 +861,25 @@ export const processGraphs = (
                             availableProperties?.data?.orientation === "v"
                                 ? realColumns
                                 : columns.map(({ id }) => {
-                                      const r = data.find(
-                                          (num: any) =>
-                                              num[options.series || ""] ===
-                                                  se &&
-                                              num[options.category || ""] === id
-                                      );
-                                      return r?.count || r?.value || r?.total;
-                                  }),
+                                    const r = data.find(
+                                        (num: any) =>
+                                            num[options.series || ""] ===
+                                            se &&
+                                            num[options.category || ""] === id
+                                    );
+                                    return r?.count || r?.value || r?.total;
+                                }),
                         y:
                             availableProperties?.data?.orientation === "v"
                                 ? columns.map(({ id }) => {
-                                      const r = data.find(
-                                          (num: any) =>
-                                              num[options.series || ""] ===
-                                                  se &&
-                                              num[options.category || ""] === id
-                                      );
-                                      return r?.count || r?.value || r?.total;
-                                  })
+                                    const r = data.find(
+                                        (num: any) =>
+                                            num[options.series || ""] ===
+                                            se &&
+                                            num[options.category || ""] === id
+                                    );
+                                    return r?.count || r?.value || r?.total;
+                                })
                                 : realColumns,
                         name: options.metadata?.[se]?.name || se,
                         type: availableProperties?.data?.[se] || options.type,
@@ -883,8 +887,8 @@ export const processGraphs = (
                         textposition: "auto",
                         texttemplate:
                             availableProperties?.data?.orientation === "v"
-                                ? `%{y:.${decimalPlaces}f}`
-                                : `%{x:.${decimalPlaces}f}`,
+                                ? `%{y:${fmt}}`
+                                : `%{x:${fmt}}`,
                     };
                 });
             } else {
@@ -898,29 +902,29 @@ export const processGraphs = (
                             availableProperties?.data?.orientation === "v"
                                 ? realColumns
                                 : columns.map(({ id }) => {
-                                      const r = data.find(
-                                          (num: any) =>
-                                              num[options.category || ""] === id
-                                      );
-                                      return r?.count || r?.value || r?.total;
-                                  }),
+                                    const r = data.find(
+                                        (num: any) =>
+                                            num[options.category || ""] === id
+                                    );
+                                    return r?.count || r?.value || r?.total;
+                                }),
                         y:
                             availableProperties?.data?.orientation === "v"
                                 ? columns.map(({ id }) => {
-                                      const r = a.find(
-                                          (num: any) =>
-                                              num[options.category || ""] === id
-                                      );
-                                      return r?.count || r?.value || r?.total;
-                                  })
+                                    const r = a.find(
+                                        (num: any) =>
+                                            num[options.category || ""] === id
+                                    );
+                                    return r?.count || r?.value || r?.total;
+                                })
                                 : realColumns,
                         type: options.type,
                         ...availableProperties.data,
                         textposition: "auto",
                         texttemplate:
                             availableProperties?.data?.orientation === "v"
-                                ? `%{y:.${decimalPlaces}f}`
-                                : `%{x:.${decimalPlaces}f}`,
+                                ? `%{y:${fmt}}`
+                                : `%{x:${fmt}}`,
                     }));
                 } else {
                     allSeries = [];
@@ -930,43 +934,72 @@ export const processGraphs = (
                                 availableProperties?.data?.orientation === "v"
                                     ? realColumns
                                     : columns.map(({ id }) => {
-                                          const r = data.find(
-                                              (num: any) =>
-                                                  num[
-                                                      options.category || ""
-                                                  ] === id
-                                          );
-                                          return (
-                                              r?.count || r?.value || r?.total
-                                          );
-                                      }),
+                                        const r = data.find(
+                                            (num: any) =>
+                                                num[
+                                                options.category || ""
+                                                ] === id
+                                        );
+                                        return (
+                                            r?.count || r?.value || r?.total
+                                        );
+                                    }),
                             y:
                                 availableProperties?.data?.orientation === "v"
                                     ? columns.map(({ id }) => {
-                                          const r = data.find(
-                                              (num: any) =>
-                                                  num[
-                                                      options.category || ""
-                                                  ] === id
-                                          );
-                                          return (
-                                              r?.count || r?.value || r?.total
-                                          );
-                                      })
+                                        const r = data.find(
+                                            (num: any) =>
+                                                num[
+                                                options.category || ""
+                                                ] === id
+                                        );
+                                        return (
+                                            r?.count || r?.value || r?.total
+                                        );
+                                    })
                                     : realColumns,
                             type: options.type,
                             ...availableProperties.data,
                             textposition: "auto",
                             texttemplate:
                                 availableProperties?.data?.orientation === "v"
-                                    ? `%{y:.${decimalPlaces}f}`
-                                    : `%{x:.${decimalPlaces}f}`,
+                                    ? `%{y:${fmt}}`
+                                    : `%{x:${fmt}}`,
                         },
                     ];
                 }
             }
         }
     }
+    // chartData = chartData.map((trace: any, idx: number) => {
+    //     const key = trace.name;
+    //     const bg = options.dataProperties?.[`${key}.bg`];
+    //     if (bg) {
+    //         return {
+    //             ...trace,
+    //             marker: {
+    //                 ...(trace.marker || {}),
+    //                 color: bg,
+    //             },
+    //         };
+    //     }
+    //     return trace;
+    // });
+    chartData = chartData.map((trace: any) => {
+        const key = trace.name;
+        const overrideBg = options.dataProperties?.[`data.${key}.bg`];
+        const overrideName = options.dataProperties?.[`data.${key}.name`];
+        return {
+            ...trace,
+            // if the user renamed this series, override the trace.name
+            ...(overrideName ? { name: overrideName } : {}),
+            marker: {
+                ...(trace.marker || {}),
+                // if the user recolored this series, override the marker color
+                ...(overrideBg ? { color: overrideBg } : {}),
+            },
+        };
+    });
     return {
         chartData,
         allSeries,
@@ -1052,7 +1085,7 @@ export const processGaugeChart = (
     return chartData;
 };
 
-export const processDHIS2Indicator = () => {};
+export const processDHIS2Indicator = () => { };
 
 export const processOneDimension = (
     data: { [key: string]: any }[],
@@ -1122,4 +1155,21 @@ export const processThreeDimensions = (
         value = (value * factor) / rows[height - 1][width - 1];
     }
     return value;
+};
+
+export const processFunnelChart = (
+    data: any[],
+    labels?: string,
+    values?: string
+) => {
+    let x: any[] = [];
+    let y: any[] = [];
+    if (Array.isArray(data) && data.length > 0 && labels && values) {
+        x = data.map((d) => d[labels]);
+        y = data.map((d) => Number(d[values]));
+    }
+    return [{
+        x,
+        y,
+    }];
 };

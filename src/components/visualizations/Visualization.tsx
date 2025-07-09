@@ -296,6 +296,7 @@ export const getVisualization = (
                 section={section}
             />
         ),
+
         clock: (
             <ClockVisualisation
                 visualization={visualization}

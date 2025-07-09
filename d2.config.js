@@ -1,8 +1,8 @@
 const config = {
   type: "app",
-  name: "Campaign Dashboards",
-  title: " Campaign Dashboards",
-  description: "Campaign Dashboards",
+  name: "Minister's Dashboards",
+  title: " Minister's Dashboards",
+  description: "Minister's Dashboards",
   entryPoints: {
     app: "./src/AppWrapper.js",
   },

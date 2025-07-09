@@ -19,14 +19,14 @@ const queryClient = new QueryClient({
     },
 });
 
-const AppWrapper = () => (
-    <ChakraProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>
-            <ReactErrorBoundary>
-                <App />
-            </ReactErrorBoundary>
-        </QueryClientProvider>
-    </ChakraProvider>
-);
-
-export default AppWrapper;
+export default function AppWrapper() {
+    return (
+        <ChakraProvider theme={theme}>
+            <QueryClientProvider client={queryClient}>
+                <ReactErrorBoundary>
+                    <App />
+                </ReactErrorBoundary>
+            </QueryClientProvider>
+        </ChakraProvider>
+    )
+}

@@ -504,9 +504,9 @@ const Section = () => {
                                                 ) {
                                                     const viz =
                                                         section.visualizations[
-                                                            section
-                                                                .visualizations
-                                                                .length - 2
+                                                        section
+                                                            .visualizations
+                                                            .length - 2
                                                         ];
                                                     setActive(() => viz.id);
                                                 } else {
