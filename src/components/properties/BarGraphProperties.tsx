@@ -103,14 +103,15 @@ const BarGraphProperties = ({
                     <TextProperty
                       visualization={visualization}
                       title=""
-                      attribute={`${row}.name`}
+                      // attribute={`${row}.name`}
+                      attribute={`data.${row}.name`}
                     />
                   </Td>
                   <Td w="50px">
                     <ColorProperty
                       visualization={visualization}
                       title=""
-                      attribute={`${row}.bg`}
+                      attribute={`data.${row}.bg`}
                     />
                   </Td>
                 </Tr>
@@ -169,21 +170,21 @@ const BarGraphProperties = ({
                     <TextProperty
                       visualization={visualization}
                       title=""
-                      attribute={`${row}.name`}
+                      attribute={`data.${row}.name`}
                     />
                   </Td>
                   <Td w="50px">
                     <ColorProperty
                       visualization={visualization}
                       title=""
-                      attribute={`${row}.bg`}
+                      attribute={`data.${row}.bg`}
                     />
                   </Td>
                   <Td w="100px">
                     <NumberProperty
                       visualization={visualization}
                       title=""
-                      attribute={`${row}.position`}
+                      attribute={`data.${row}.position`}
                       min={0}
                       step={1}
                       size="sm"
@@ -372,6 +373,12 @@ const BarGraphProperties = ({
         min={0}
         max={3}
         step={1}
+      />
+      <SwitchProperty
+        visualization={visualization}
+        title="Comma Separate Values"
+        attribute="data.commaSeparated"
+        direction="row-reverse"
       />
 
       {visualization.indicators.length > 1 && (

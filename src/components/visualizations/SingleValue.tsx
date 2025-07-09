@@ -4,6 +4,7 @@ import {
     CircularProgressLabel,
     Stack,
     Text,
+    Circle
 } from "@chakra-ui/react";
 import { Progress } from "antd";
 import { useStore } from "effector-react";
@@ -37,23 +38,49 @@ const SingleValue = ({
     const titleCase = dataProperties?.["data.title.case"] || "";
     const titleColor = dataProperties?.["data.title.color"] || "black";
     const alignItems = dataProperties?.["data.alignItems"] || "center";
-    const justifyContent = dataProperties?.["data.justifyContent"] || "center";
-    const singleValueBackground = "none";
-    // const singleValueBackground = dataProperties?.["data.backgroundColor"] || "";
     const singleValueBorder = dataProperties?.["data.border"] || 0;
     const fontWeight = dataProperties?.["data.format.fontWeight"] || 400;
     const fontSize = dataProperties?.["data.format.fontSize"] || 2;
     const alignment = dataProperties?.["data.alignment"] || "column";
+    const justifyContent =
+        dataProperties?.["data.justifyContent"]
+        ?? (alignment.startsWith("row") ? "space-between" : "center"); const singleValueBackground = "none";
     const bg = layoutProperties?.["layout.bg"] || "";
     const radius = dataProperties?.["data.targetradius"] || 60;
     const thickness = dataProperties?.["data.targetthickness"] || 10;
     const targetColor = dataProperties?.["data.targetcolor"] || "blue";
     const targetSpacing = dataProperties?.["data.targetspacing"] || 0;
-    const spacing =
-        dataProperties?.["data.format.spacing"] ||
-        ["row", "row-reverse"].indexOf(alignment) !== -1
-            ? 10
-            : 0;
+    const defaultSpacing = ["row", "row-reverse"].includes(alignment) ? 10 : 0;
+    const spacing = dataProperties?.["data.format.spacing"] ?? defaultSpacing;
+
+    const showCircle = dataProperties?.["data.showCircle"] ?? false;
+    const circleSize = dataProperties?.["data.circleSize"] ?? 100;
+    const circleThickness = dataProperties?.["data.circleThickness"] ?? 2;
+    const circleDotted = dataProperties?.["data.circleDotted"] ?? false;
+    const circleColor = dataProperties?.["data.circleColor"] ?? color;
+
+    const secondaryKey = dataProperties?.["data.secondaryTarget"];
+    const secondaryPosition = dataProperties?.["data.secondaryTargetPosition"] ?? "row";
+    const secondarySpacing = dataProperties?.["data.secondaryTargetSpacing"] ?? 0;
+    const secondaryFontSize = dataProperties?.["data.secondaryTargetFontSize"] ?? fontSize * 10;   // e.g. px value
+    const secondaryFontWeight = dataProperties?.["data.secondaryTargetFontWeight"] ?? fontWeight;
+    const secondaryColor = dataProperties?.["data.secondaryTargetColor"] ?? color;
+    const bracketedSecondary = dataProperties?.["data.secondaryTargetBracketed"] ?? false;
+
+    const [secondaryValue, setSecondaryValue] = useState<number | null>(null);
+    const secondaryDecimals = dataProperties?.["data.secondaryTargetDecimalPlaces"] ?? 0;
+    const secondaryFormatter = Intl.NumberFormat("en-US", {
+        style: "decimal",
+        maximumFractionDigits: secondaryDecimals,
+    });
+
+    useEffect(() => {
+        if (secondaryKey) {
+            const rows = visualizationData[secondaryKey];
+            if (rows?.length) setSecondaryValue(Number(rows[0].value));
+            else setSecondaryValue(Number(secondaryKey));
+        }
+    }, [secondaryKey, visualizationData]);
 
     const format = {
         style: dataProperties?.["data.format.style"] || "decimal",
@@ -87,6 +114,146 @@ const SingleValue = ({
     }, [value]);
     const numberFormatter = Intl.NumberFormat("en-US", format);
 
+    // return (
+    //     <Stack
+    //         alignItems={alignItems}
+    //         justifyContent={justifyContent}
+    //         direction={alignment}
+    //         backgroundColor={singleValueBackground}
+    //         border={`${singleValueBorder}px`}
+    //         borderRadius="3px"
+    //         w="100%"
+    //         h="100%"
+    //         padding="4px"
+    //         bg={bg}
+    //         spacing={`${spacing}px`}
+    //     >
+    //         {showCircle ? (
+    //             <Box
+    //                 w={`${circleSize}px`}
+    //                 h={`${circleSize}px`}
+    //                 display="flex"
+    //                 flexDirection="column"
+    //                 alignItems="center"
+    //                 justifyContent="center"
+    //                 borderWidth={`${circleThickness}px`}
+    //                 borderStyle={circleDotted ? "dashed" : "solid"}
+    //                 borderColor={circleColor}
+    //                 borderRadius="50%"
+    //             >
+    //                 {visualization.name && (
+    //                     <Text
+    //                         textTransform={titleCase}
+    //                         fontWeight={titleFontWeight}
+    //                         fontSize={`${titleFontSize}vh`}
+    //                         color={titleColor}
+    //                         whiteSpace="normal"
+    //                         mb="2"
+    //                     >
+    //                         {visualization.name}
+    //                     </Text>
+    //                 )}
+    //                 <Stack direction={direction} spacing={`${targetSpacing}px`}>
+    //                     {/* primary target graph */}
+    //                     {targetGraph === "circular" && targetValue != null && target ? (
+    //                         <CircularProgress
+    //                             value={(value * 100) / targetValue}
+    //                             size={`${radius}px`}
+    //                             thickness={`${thickness}px`}
+    //                             color={targetColor}
+    //                         >
+    //                             <CircularProgressLabel>
+    //                                 {((value * 100) / targetValue).toFixed(0)}%
+    //           </CircularProgressLabel>
+    //                         </CircularProgress>
+    //                     ) : targetGraph === "progress" && targetValue != null && target ? (
+    //                         <Box w="300px">
+    //                             <Progress percent={50} status="active" strokeWidth={thickness} />
+    //                         </Box>
+    //                     ) : null}
+
+    //                     {/* main value + secondary target */}
+    //                     <Stack
+    //                         direction={secondaryPosition}
+    //                         spacing={`${secondarySpacing}px`}
+    //                         alignItems="center"
+    //                     >
+    //                         <Text fontSize={`${fontSize}vh`} color={color} fontWeight={fontWeight}>
+    //                             {prefix}
+    //                             {!!value ? numberFormatter.format(value) : "-"}
+    //                             {suffix}
+    //                         </Text>
+    //                         {secondaryValue != null && (
+    //                             <Text
+    //                                 fontSize={`${secondaryFontSize}px`}
+    //                                 color={secondaryColor}
+    //                                 fontWeight={secondaryFontWeight}
+    //                             >
+    //                                 {bracketedSecondary ? "(" : ""}
+    //                                 {secondaryFormatter.format(secondaryValue)}%
+    //                                 {bracketedSecondary ? ")" : ""}
+    //                             </Text>
+    //                         )}
+    //                     </Stack>
+    //                 </Stack>
+    //             </Box>
+    //         ) : (
+    //                 <>
+    //                     {visualization.name && (
+    //                         <Text
+    //                             textTransform={titleCase}
+    //                             fontWeight={titleFontWeight}
+    //                             fontSize={`${titleFontSize}vh`}
+    //                             color={titleColor}
+    //                             whiteSpace="normal"
+    //                         >
+    //                             {visualization.name}
+    //                         </Text>
+    //                     )}
+    //                     <Stack direction={direction} spacing={`${targetSpacing}px`}>
+    //                         {targetGraph === "circular" && targetValue != null && target ? (
+    //                             <CircularProgress
+    //                                 value={(value * 100) / targetValue}
+    //                                 size={`${radius}px`}
+    //                                 thickness={`${thickness}px`}
+    //                                 color={targetColor}
+    //                             >
+    //                                 <CircularProgressLabel>
+    //                                     {((value * 100) / targetValue).toFixed(0)}%
+    //           </CircularProgressLabel>
+    //                             </CircularProgress>
+    //                         ) : targetGraph === "progress" && targetValue != null && target ? (
+    //                             <Box w="300px">
+    //                                 <Progress percent={50} status="active" strokeWidth={thickness} />
+    //                             </Box>
+    //                         ) : null}
+
+    //                         <Stack
+    //                             direction={secondaryPosition}
+    //                             spacing={`${secondarySpacing}px`}
+    //                             alignItems="center"
+    //                         >
+    //                             <Text fontSize={`${fontSize}vh`} mr="16px" color={color} fontWeight={fontWeight}>
+    //                                 {prefix}
+    //                                 {!!value ? numberFormatter.format(value) : "-"}
+    //                                 {suffix}
+    //                             </Text>
+    //                             {secondaryValue != null && (
+    //                                 <Text
+    //                                     fontSize={`${secondaryFontSize}px`}
+    //                                     color={secondaryColor}
+    //                                     fontWeight={secondaryFontWeight}
+    //                                 >
+    //                                     {`${numberFormatter.format(secondaryValue)}%`}
+    //                                 </Text>
+    //                             )}
+    //                         </Stack>
+    //                     </Stack>
+    //                 </>
+    //             )}
+    //     </Stack>
+    // );
+
     return (
         <Stack
             alignItems={alignItems}
@@ -95,53 +262,142 @@ const SingleValue = ({
             backgroundColor={singleValueBackground}
             border={`${singleValueBorder}px`}
             borderRadius="3px"
+            w="100%"
+            h="100%"
             padding="4px"
             bg={bg}
             spacing={`${spacing}px`}
         >
-            {visualization.name && (
-                <Text
-                    textTransform={titleCase}
-                    fontWeight={titleFontWeight}
-                    fontSize={`${titleFontSize}vh`}
-                    color={titleColor}
-                    whiteSpace="normal"
+            {showCircle ? (
+                <Box
+                    w={`${circleSize}px`}
+                    h={`${circleSize}px`}
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    borderWidth={`${circleThickness}px`}
+                    borderStyle={circleDotted ? "dashed" : "solid"}
+                    borderColor={circleColor}
+                    borderRadius="50%"
                 >
-                    {visualization.name}
-                </Text>
-            )}
-            <Stack direction={direction} spacing={`${targetSpacing}px`}>
-                {targetGraph === "circular" && targetValue && target ? (
-                    <CircularProgress
-                        value={(value * 100) / targetValue}
-                        size={`${radius}px`}
-                        thickness={`${thickness}px`}
-                        color={targetColor}
-                    >
-                        <CircularProgressLabel>
-                            {((value * 100) / targetValue).toFixed(0)}%
-                        </CircularProgressLabel>
-                    </CircularProgress>
-                ) : targetGraph === "progress" && targetValue && target ? (
-                    <Box w="300px">
-                        <Progress
-                            percent={50}
-                            status="active"
-                            strokeWidth={thickness}
-                        />
-                    </Box>
-                ) : null}
-                <Text
-                    fontSize={`${fontSize}vh`}
-                    color={color}
-                    fontWeight={fontWeight}
-                >
-                    {prefix}
-                    {!!value ? numberFormatter.format(value) : "-"}
-                    {suffix}
-                </Text>
-            </Stack>
+                    {visualization.name && (
+                        <Text
+                            textTransform={titleCase}
+                            fontWeight={titleFontWeight}
+                            fontSize={`${titleFontSize}vh`}
+                            color={titleColor}
+                            whiteSpace="normal"
+                            mb="2"
+                        >
+                            {visualization.name}
+                        </Text>
+                    )}
+                    <Stack direction={direction} spacing={`${targetSpacing}px`}>
+                        {/* primary target graph */}
+                        {targetGraph === "circular" && targetValue != null && target ? (
+                            <CircularProgress
+                                value={(value * 100) / targetValue}
+                                size={`${radius}px`}
+                                thickness={`${thickness}px`}
+                                color={targetColor}
+                            >
+                                <CircularProgressLabel>
+                                    {((value * 100) / targetValue).toFixed(0)}%
+              </CircularProgressLabel>
+                            </CircularProgress>
+                        ) : targetGraph === "progress" && targetValue != null && target ? (
+                            <Box w="300px">
+                                <Progress percent={50} status="active" strokeWidth={thickness} />
+                            </Box>
+                        ) : null}
+
+                        {/* main value + secondary target */}
+                        <Stack
+                            direction={secondaryPosition}
+                            spacing={`${secondarySpacing}px`}
+                            alignItems="center"
+                        >
+                            <Text fontSize={`${fontSize}vh`} color={color} fontWeight={fontWeight}>
+                                {prefix}
+                                {!!value ? numberFormatter.format(value) : "-"}
+                                {suffix}
+                            </Text>
+                            {secondaryValue != null && (
+                                <Text
+                                    fontSize={`${secondaryFontSize}px`}
+                                    color={secondaryColor}
+                                    fontWeight={secondaryFontWeight}
+                                >
+                                    {bracketedSecondary && "("}
+                                    {secondaryFormatter.format(secondaryValue)}%
+                                    {bracketedSecondary && ")"}
+                                </Text>
+                            )}
+                        </Stack>
+                    </Stack>
+                </Box>
+            ) : (
+                    <>
+                        {visualization.name && (
+                            <Text
+                                textTransform={titleCase}
+                                fontWeight={titleFontWeight}
+                                fontSize={`${titleFontSize}vh`}
+                                color={titleColor}
+                                whiteSpace="normal"
+                            >
+                                {visualization.name}
+                            </Text>
+                        )}
+                        <Stack direction={direction} spacing={`${targetSpacing}px`}>
+                            {/* primary target graph */}
+                            {targetGraph === "circular" && targetValue != null && target ? (
+                                <CircularProgress
+                                    value={(value * 100) / targetValue}
+                                    size={`${radius}px`}
+                                    thickness={`${thickness}px`}
+                                    color={targetColor}
+                                >
+                                    <CircularProgressLabel>
+                                        {((value * 100) / targetValue).toFixed(0)}%
+              </CircularProgressLabel>
+                                </CircularProgress>
+                            ) : targetGraph === "progress" && targetValue != null && target ? (
+                                <Box w="300px">
+                                    <Progress percent={50} status="active" strokeWidth={thickness} />
+                                </Box>
+                            ) : null}
+
+                            {/* main value + secondary target */}
+                            <Stack
+                                direction={secondaryPosition}
+                                spacing={`${secondarySpacing}px`}
+                                alignItems="center"
+                            >
+                                <Text fontSize={`${fontSize}vh`} mr="16px" color={color} fontWeight={fontWeight}>
+                                    {prefix}
+                                    {!!value ? numberFormatter.format(value) : "-"}
+                                    {suffix}
+                                </Text>
+                                {secondaryValue != null && (
+                                    <Text
+                                        fontSize={`${secondaryFontSize}px`}
+                                        color={secondaryColor}
+                                        fontWeight={secondaryFontWeight}
+                                    >
+                                        {bracketedSecondary && "("}
+                                        {secondaryFormatter.format(secondaryValue)}%
+                                        {bracketedSecondary && ")"}
+                                    </Text>
+                                )}
+                            </Stack>
+                        </Stack>
+                    </>
+                )}
         </Stack>
     );
+
+
 };
 export default SingleValue;

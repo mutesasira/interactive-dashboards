@@ -18,7 +18,7 @@ const onProxyRes = (proxyRes) => {
 // proxy middleware options
 const options = {
   //target: "https://eidsr.health.go.ug",
-  target: "https://dev.ndpme.go.ug/ndpdb",
+  // target: "https://dev.ndpme.go.ug/ndpdb",
   // target: "ndpme.go.ug/ndpdb",
   // target: "http://localhost:8080",
   // target: "https://tests.dhis2.hispuganda.org/hmis/",
@@ -32,6 +32,8 @@ const options = {
   // target: "https://emisuganda.org/emis",
   // target: "https://dev.emisuganda.org/emisdev",
   // target: "https://play.dhis2.org/40.3.0",
+  target: "https://emis.dhis2nigeria.org.ng/dhis",
+
   onProxyReq,
   onProxyRes,
   changeOrigin: true, // needed for virtual hosted sites

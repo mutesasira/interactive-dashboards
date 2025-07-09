@@ -1,10 +1,168 @@
-import { Stack } from "@chakra-ui/react";
+// import { Stack, Input } from "@chakra-ui/react";
+// import { useDataEngine } from "@dhis2/app-runtime";
+// import { Tree } from "antd";
+// import arrayToTree from "array-to-tree";
+// import { useLiveQuery } from "dexie-react-hooks";
+// import { flatten } from "lodash";
+// import React, { useState, useMemo, useEffect } from "react";
+// import { db } from "../db";
+
+// const OUTree = ({
+//     value,
+//     onChange,
+// }: {
+//     value: string[];
+//     onChange: (value: string[]) => void;
+// }) => {
+//     const engine = useDataEngine();
+//     const organisations = useLiveQuery(() => db.organisations.toArray()) || [];
+//     const expandedKeysDb = useLiveQuery(() => db.expandedKeys.get("1"));
+//     const [autoExpandParent, setAutoExpandParent] = useState(true);
+//     const [checkedKeys, setCheckedKeys] = useState<
+//         { checked: React.Key[]; halfChecked: React.Key[] } | React.Key[]
+//     >({ checked: value, halfChecked: [] });
+//     const [search, setSearch] = useState("");
+
+//     const fullTreeData = useMemo(
+//         () => arrayToTree(organisations, { parentProperty: "pId" }),
+//         [organisations]
+//     );
+
+//     const filterTree = (nodes: any[]): any[] =>
+//         nodes
+//             .map((node) => {
+//                 const children = node.children ? filterTree(node.children) : [];
+//                 const match = node.title
+//                     .toLowerCase()
+//                     .includes(search.toLowerCase());
+//                 if (match || children.length) {
+//                     return { ...node, children };
+//                 }
+//                 return null;
+//             })
+//             .filter(Boolean) as any[];
+
+//     const getAllKeys = (nodes: any[]): string[] =>
+//         nodes.reduce<string[]>((acc, node) => {
+//             acc.push(node.key);
+//             if (node.children) acc.push(...getAllKeys(node.children));
+//             return acc;
+//         }, []);
+
+//     const [expandedKeysState, setExpandedKeysState] = useState<string[]>(
+//         () => expandedKeysDb?.name.split(",") || []
+//     );
+
+//     useEffect(() => {
+//         setExpandedKeysState(expandedKeysDb?.name.split(",") || []);
+//     }, [expandedKeysDb]);
+
+//     useEffect(() => {
+//         if (search.trim() === "") return;
+//         const filtered = filterTree(fullTreeData);
+//         setExpandedKeysState(getAllKeys(filtered));
+//         setAutoExpandParent(true);
+//     }, [search, fullTreeData]);
+
+//     const treeData = useMemo(
+//         () => (search.trim() ? filterTree(fullTreeData) : fullTreeData),
+//         [search, fullTreeData]
+//     );
+
+//     const onLoadData = async ({ id, children }: any) => {
+//         if (children) return;
+//         try {
+//             const {
+//                 units: { organisationUnits },
+//             }: any = await engine.query({
+//                 units: {
+//                     resource: "organisationUnits.json",
+//                     params: {
+//                         filter: `id:in:[${id}]`,
+//                         paging: "false",
+//                         order: "shortName:desc",
+//                         fields: "children[id,name,path,leaf]",
+//                     },
+//                 },
+//             });
+//             const found = organisationUnits.flatMap((unit: any) =>
+//                 unit.children.map((child: any) => ({
+//                     id: child.id,
+//                     pId: id,
+//                     value: child.id,
+//                     title: child.name,
+//                     key: child.id,
+//                     isLeaf: child.leaf,
+//                 }))
+//             );
+//             await db.organisations.bulkPut(found);
+//         } catch (e) {
+//             console.error(e);
+//         }
+//     };
+
+//     const onExpand = async (expandedKeysValue: React.Key[]) => {
+//         await db.expandedKeys.put({
+//             id: "1",
+//             name: (expandedKeysValue as string[]).join(","),
+//         });
+//         setAutoExpandParent(false);
+//         setExpandedKeysState(expandedKeysValue as string[]);
+//     };
+
+//     const onCheck = (
+//         checkedKeysValue:
+//             | { checked: React.Key[]; halfChecked: React.Key[] }
+//             | React.Key[]
+//     ) => {
+//         const allChecked = Array.isArray(checkedKeysValue)
+//             ? checkedKeysValue
+//             : checkedKeysValue.checked;
+//         setCheckedKeys(checkedKeysValue);
+//         onChange(allChecked.map((val) => String(val)));
+//     };
+
+//     return (
+//         <Stack spacing="10px">
+//             <Input
+//                 placeholder="Search organisation units…"
+//                 value={search}
+//                 onChange={(e) => setSearch(e.target.value)}
+//                 size="sm"
+//             />
+
+//             <Tree
+//                 checkable
+//                 onExpand={onExpand}
+//                 expandedKeys={expandedKeysState}
+//                 autoExpandParent={autoExpandParent}
+//                 checkStrictly
+//                 onCheck={onCheck}
+//                 checkedKeys={checkedKeys}
+//                 loadData={onLoadData}
+//                 style={{
+//                     maxHeight: "400px",
+//                     overflow: "auto",
+//                     fontSize: "18px",
+//                 }}
+//                 treeData={treeData}
+//             />
+//         </Stack>
+//     );
+// };
+
+// export default OUTree;
+
+// src/components/OUTree.tsx
+
+
+// src/components/OUTree.tsx
+import React, { useState, useMemo, useEffect } from "react";
+import { Stack, Input, Box, Spinner, List, ListItem, Button } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { Tree } from "antd";
 import arrayToTree from "array-to-tree";
 import { useLiveQuery } from "dexie-react-hooks";
-import { flatten } from "lodash";
-import React, { useState } from "react";
 import { db } from "../db";
 
 const OUTree = ({
@@ -15,112 +173,209 @@ const OUTree = ({
     onChange: (value: string[]) => void;
 }) => {
     const engine = useDataEngine();
-    const organisations = useLiveQuery(() => db.organisations.toArray());
-    const expandedKeys = useLiveQuery(() => db.expandedKeys.get("1"));
-    const [autoExpandParent, setAutoExpandParent] = useState<boolean>(true);
+
+    const organisations = useLiveQuery(() => db.organisations.toArray()) || [];
+    const expandedKeysDb = useLiveQuery(() => db.expandedKeys.get("1"));
+
+    const [autoExpandParent, setAutoExpandParent] = useState(true);
     const [checkedKeys, setCheckedKeys] = useState<
         { checked: React.Key[]; halfChecked: React.Key[] } | React.Key[]
-    >(() => {
-        return { checked: value, halfChecked: [] };
-    });
+    >({ checked: value, halfChecked: [] });
 
-    const onLoadData = async ({ id, children }: any) => {
-        if (children) {
+    const [search, setSearch] = useState("");
+    const [searching, setSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<
+        Array<{ id: string; name: string; path: string }>
+    >([]);
+
+    const fullTreeData = useMemo(
+        () => arrayToTree(organisations, { parentProperty: "pId" }),
+        [organisations]
+    );
+
+    const [expandedKeysState, setExpandedKeysState] = useState<string[]>(
+        () => expandedKeysDb?.name.split(",") || []
+    );
+    useEffect(() => {
+        setExpandedKeysState(expandedKeysDb?.name.split(",") || []);
+    }, [expandedKeysDb]);
+
+    useEffect(() => {
+        if (search.trim().length < 3) {
+            setSearchResults([]);
             return;
         }
-        try {
-            const {
-                units: { organisationUnits },
-            }: any = await engine.query({
+        let cancelled = false;
+        setSearching(true);
+
+        engine
+            .query({
                 units: {
                     resource: "organisationUnits.json",
                     params: {
-                        filter: `id:in:[${id}]`,
+                        filter: `name:ilike:${search}`,
+                        fields: "id,name,path",
                         paging: "false",
-                        order: "shortName:desc",
-                        fields: "children[id,name,path,leaf]",
                     },
                 },
+            })
+            .then((res: any) => {
+                if (cancelled) return;
+                console.log("DHIS2 search response.units:", res.units);
+                const list: Array<{ id: string; name: string; path: string }> =
+                    res.units.organisationUnits || [];
+                setSearchResults(list);
+            })
+            .catch((err) => {
+                console.error("DHIS2 search error:", err);
+                if (!cancelled) setSearchResults([]);
+            })
+            .finally(() => {
+                if (!cancelled) setSearching(false);
             });
-            const found = organisationUnits.map((unit: any) => {
-                return unit.children
-                    .map((child: any) => {
-                        return {
-                            id: child.id,
-                            pId: id,
-                            value: child.id,
-                            title: child.name,
-                            key: child.id,
-                            isLeaf: child.leaf,
-                        };
-                    })
-                    .sort((a: any, b: any) => {
-                        if (a.title > b.title) {
-                            return 1;
-                        }
-                        if (a.title < b.title) {
-                            return -1;
-                        }
-                        return 0;
-                    });
-            });
-            await db.organisations.bulkPut(flatten(found));
-        } catch (e) {
-            console.log(e);
-        }
-    };
-    const onExpand = async (expandedKeysValue: React.Key[]) => {
-        await db.expandedKeys.put({
-            id: "1",
-            name: expandedKeysValue.join(","),
-        });
-        setAutoExpandParent(false);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [search, engine]);
+
+    const handlePick = async (unit: { id: string; path: string }) => {
+        const ancestors = unit.path.split("/").filter(Boolean);
+
+        await Promise.all(
+            ancestors.map(async (pid) => {
+                const res: any = await engine.query({
+                    units: {
+                        resource: "organisationUnits.json",
+                        params: {
+                            filter: `id:in:[${pid}]`,
+                            fields: "children[id,name,path,leaf]",
+                            paging: "false",
+                        },
+                    },
+                });
+                console.log(`Loaded children for ${pid}:`, res.units);
+                const parentUnits: any[] = res.units.organisationUnits || [];
+                const toPut = parentUnits.flatMap((u) =>
+                    u.children.map((c: any) => ({
+                        id: c.id,
+                        pId: pid,
+                        value: c.id,
+                        title: c.name,
+                        key: c.id,
+                        isLeaf: c.leaf,
+                    }))
+                );
+                await db.organisations.bulkPut(toPut);
+            })
+        );
+
+        setExpandedKeysState(ancestors);
+        setAutoExpandParent(true);
+        setCheckedKeys({ checked: [unit.id], halfChecked: [] });
+        onChange([unit.id]);
+
+        setSearch("");
+        setSearchResults([]);
     };
 
-    const onCheck = async (
-        checkedKeysValue:
-            | { checked: React.Key[]; halfChecked: React.Key[] }
-            | React.Key[]
-    ) => {
-        let allChecked = [];
-        if (Array.isArray(checkedKeysValue)) {
-            allChecked = checkedKeysValue;
-        } else {
-            allChecked = checkedKeysValue.checked;
-        }
-        setCheckedKeys(checkedKeysValue);
-        onChange(allChecked.map((val) => String(val)));
+    const onLoadData = async ({ id, children }: any) => {
+        if (children) return;
+        const res: any = await engine.query({
+            units: {
+                resource: "organisationUnits.json",
+                params: {
+                    filter: `id:in:[${id}]`,
+                    fields: "children[id,name,path,leaf]",
+                    paging: "false",
+                },
+            },
+        });
+        console.log(`Lazy‐loaded children for ${id}:`, res.units);
+        const parentUnits: any[] = res.units.organisationUnits || [];
+        const found = parentUnits.flatMap((u) =>
+            u.children.map((c: any) => ({
+                id: c.id,
+                pId: id,
+                value: c.id,
+                title: c.name,
+                key: c.id,
+                isLeaf: c.leaf,
+            }))
+        );
+        await db.organisations.bulkPut(found);
     };
+
+    const onExpand = async (keys: React.Key[]) => {
+        await db.expandedKeys.put({
+            id: "1",
+            name: (keys as string[]).join(","),
+        });
+        setAutoExpandParent(false);
+        setExpandedKeysState(keys as string[]);
+    };
+
+    const onCheck = (
+        keys: { checked: React.Key[]; halfChecked: React.Key[] } | React.Key[]
+    ) => {
+        const all = Array.isArray(keys) ? keys : keys.checked;
+        setCheckedKeys(keys);
+        onChange(all.map((k) => String(k)));
+    };
+
     return (
-        <Stack spacing="20px">
-            {organisations !== undefined && (
-                <Stack direction="row">
+        <Stack spacing="10px">
+            <Input
+                placeholder="Search organisation units…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                size="sm"
+            />
+
+            {search.trim().length >= 3 ? (
+                searching ? (
+                    <Spinner size="sm" />
+                ) : (
+                        <Box
+                            maxH="200px"
+                            overflowY="auto"
+                            border="1px solid #ccc"
+                            borderRadius="4px"
+                        >
+                            <List spacing={1}>
+                                {searchResults.map((u) => (
+                                    <ListItem key={u.id}>
+                                        <Button
+                                            variant="link"
+                                            onClick={() => handlePick(u)}
+                                            size="sm"
+                                            w="100%"
+                                            justifyContent="flex-start"
+                                        >
+                                            {u.name}
+                                        </Button>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </Box>
+                    )
+            ) : (
                     <Tree
                         checkable
                         onExpand={onExpand}
-                        checkStrictly
-                        expandedKeys={
-                            expandedKeys !== undefined
-                                ? expandedKeys.name.split(",")
-                                : []
-                        }
+                        expandedKeys={expandedKeysState}
                         autoExpandParent={autoExpandParent}
+                        checkStrictly
                         onCheck={onCheck}
                         checkedKeys={checkedKeys}
                         loadData={onLoadData}
-                        style={{
-                            maxHeight: "400px",
-                            overflow: "auto",
-                            fontSize: "18px",
-                        }}
-                        treeData={arrayToTree(organisations, {
-                            parentProperty: "pId",
-                        })}
+                        style={{ maxHeight: 400, overflow: "auto", fontSize: 18 }}
+                        treeData={fullTreeData}
                     />
-                </Stack>
-            )}
+                )}
         </Stack>
     );
 };
 
 export default OUTree;
+

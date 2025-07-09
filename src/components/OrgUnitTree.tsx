@@ -70,8 +70,29 @@ const OrgUnitTree = ({ onChange, value }: OrgUnitTreeProps) => {
         );
     };
     return (
+        // <TreeSelect
+        //     allowClear={true}
+        //     treeDataSimpleMode
+        //     style={{ width: "100%" }}
+        //     value={value}
+        //     listHeight={700}
+        //     treeExpandedKeys={expanded?.map(({ id }) => id)}
+        //     onTreeExpand={onTreeExpand}
+        //     dropdownStyle={{ overflow: "auto" }}
+        //     placeholder="Please select location"
+        //     onChange={onChange}
+        //     showSearch={true}
+        //     loadData={onLoadData}
+        //     treeData={organisations}
+        // />
         <TreeSelect
-            allowClear={true}
+            allowClear
+            showSearch
+            filterTreeNode={(input, treeNode) =>
+                (treeNode.title as string)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+            }
             treeDataSimpleMode
             style={{ width: "100%" }}
             value={value}
@@ -79,9 +100,8 @@ const OrgUnitTree = ({ onChange, value }: OrgUnitTreeProps) => {
             treeExpandedKeys={expanded?.map(({ id }) => id)}
             onTreeExpand={onTreeExpand}
             dropdownStyle={{ overflow: "auto" }}
-            placeholder="Please select location"
+            placeholder="Search organisations…"
             onChange={onChange}
-            showSearch={true}
             loadData={onLoadData}
             treeData={organisations}
         />

@@ -23,8 +23,7 @@ const BarGraph = ({
   section,
   data,
 }: BarGraphProps) => {
-  const metadata = useStore($visualizationMetadata);
-  const { downloadable } = useSearch<LocationGenerics>();
+  const metadata = useStore($visualizationMetadata)[visualization.id]; const { downloadable } = useSearch<LocationGenerics>();
   let availableProperties: { [key: string]: any } = {
     layout: {
       legend: { x: 0.5, y: -0.1, orientation: "h" },
@@ -73,8 +72,8 @@ const BarGraph = ({
         visualization.showTitle === true &&
         visualization.name) ||
         (visualization.showTitle === undefined && visualization.name)) && (
-        <VisualizationTitle section={section} title={visualization.name} />
-      )}
+          <VisualizationTitle section={section} title={visualization.name} />
+        )}
       <Stack direction="column" spacing={0} w="100%" h="100%">
         <Stack flex={1} spacing={0}>
           <Stack flex="1 1 0" minH={0} spacing={0} overflow="hidden">
@@ -120,6 +119,7 @@ const BarGraph = ({
           {allSeries
             .filter((v) => !isEmpty(v))
             .map((series, index) => (
+
               <Stack
                 direction="row"
                 spacing="2px"

@@ -6,7 +6,7 @@ interface FunnelGraphProps extends ChartProps {
     series?: string;
 }
 
-const FunnelGraph = ({}: FunnelGraphProps) => {
+const FunnelGraph = ({ }: FunnelGraphProps) => {
     const datas: any = [
         {
             type: "funnel",

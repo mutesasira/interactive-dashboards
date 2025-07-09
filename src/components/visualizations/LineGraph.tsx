@@ -1,16 +1,28 @@
+
+
 import { Stack } from "@chakra-ui/react";
 import { useSearch } from "@tanstack/react-location";
 import update from "lodash/fp/update";
 import Plot from "react-plotly.js";
+import { useMemo } from "react";
 import { ChartProps, LocationGenerics } from "../../interfaces";
 import { exclusions } from "../../utils/utils";
 import { processGraphs } from "../processors";
 import VisualizationTitle from "./VisualizationTitle";
+
 interface LineGraphProps extends ChartProps {
     category?: string;
     series?: string;
 }
 
+/**
+ * LineGraph
+ * ----------
+ * Keeps the same data‑flow & props interface, but improves how the legend looks.
+ * – Legend is now truly horizontal, anchored to the left, and each item gets an identical
+ *   width expressed as a *fraction* of the plot width so they spread out uniformly.
+ * – Users can still override any of these via `layoutProperties` the same way as before.
+ */
 const LineGraph = ({
     visualization,
     category,
@@ -20,10 +32,12 @@ const LineGraph = ({
     section,
     data,
 }: LineGraphProps) => {
+
     const { downloadable } = useSearch<LocationGenerics>();
-    let availableProperties: { [key: string]: any } = {
+
+    const baseProperties: { [key: string]: any } = {
         layout: {
-            legend: { x: 0.5, y: -0.3, orientation: "h" },
+            legend: { x: 0, y: -0.15, orientation: "h" },
             yaxis: { automargin: true },
             colorway: [
                 "#1f77b4",
@@ -40,21 +54,38 @@ const LineGraph = ({
     };
 
     Object.entries(layoutProperties || {}).forEach(([property, value]) => {
-        update(property, () => value, availableProperties);
+        update(property, () => value, baseProperties);
     });
-    const titleFontSize = dataProperties?.["data.title.fontsize"] || "1.5vh";
-    const titleCase = dataProperties?.["data.title.case"] || "";
-    const titleColor = dataProperties?.["data.title.color"] || "gray.500";
+
+
+    const titleFontSize = dataProperties?.["data.title.fontsize"] ?? "1.5vh";
+    const titleCase = dataProperties?.["data.title.case"] ?? "";
+    const titleColor = dataProperties?.["data.title.color"] ?? "gray.500";
 
     const { chartData, allSeries } = processGraphs(data, {
         order: visualization.order,
         show: visualization.show,
         summarize: visualization.properties?.["summarize"] ?? false,
         dataProperties: visualization.properties,
-        category: category,
-        series: series,
+        category,
+        series,
         type: "line",
     });
+
+    const legendDefaults = useMemo(() => {
+        const count = allSeries?.length || chartData?.length || 1;
+        return {
+            orientation: "h",
+            x: 0,
+            xanchor: "left",
+            y: -0.15,
+            yanchor: "top",
+            entrywidthmode: "fraction",
+            entrywidth: 1 / count,
+            itemsizing: "constant",
+        } as const;
+    }, [allSeries, chartData]);
+
     return (
         <Stack w="100%" h="100%" spacing={0}>
             {visualization.name && (
@@ -71,13 +102,7 @@ const LineGraph = ({
                 <Plot
                     data={chartData as any}
                     layout={{
-                        margin: {
-                            pad: 5,
-                            r: 10,
-                            t: 0,
-                            l: 60,
-                            b: 0,
-                        },
+                        margin: { pad: 5, r: 10, t: 0, l: 60, b: 0 },
                         autosize: true,
                         showlegend: true,
                         xaxis: {
@@ -87,25 +112,14 @@ const LineGraph = ({
                             showticklabels: true,
                             zeroline: false,
                         },
-                        legend: {
-                            orientation: "h",
-                            traceorder: "normal",
-                            yanchor: "top",
-                            y: -0.1,
-                            xanchor: "left",
-                            x: 0.5,
-                            font: {},
-                        },
-                        ...availableProperties.layout,
+                        legend: legendDefaults,
+                        ...baseProperties.layout,
                     }}
                     style={{ width: "100%", height: "100%" }}
                     config={{
                         displayModeBar: true,
                         responsive: true,
-                        toImageButtonOptions: {
-                            format: "svg",
-                            scale: 1,
-                        },
+                        toImageButtonOptions: { format: "svg", scale: 1 },
                         modeBarButtonsToRemove: exclusions,
                         displaylogo: false,
                     }}

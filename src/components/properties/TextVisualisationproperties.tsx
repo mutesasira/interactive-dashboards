@@ -4,36 +4,62 @@ import {
     Stack,
     Text,
     Input,
-    Button,
-    NumberDecrementStepper,
-    NumberIncrementStepper,
     NumberInput,
     NumberInputField,
     NumberInputStepper,
+    NumberIncrementStepper,
+    NumberDecrementStepper,
+    Button
 } from "@chakra-ui/react";
 import { sectionApi } from "../../Events";
 import ColorProperty from "./ColorProperty";
 
-export default function TextVisualisationproperties({
+export default function TextVisualisationProperties({
     visualization,
 }: {
     visualization: IVisualization;
 }) {
-    const inputRef = useRef<HTMLInputElement>(null);
+    const textRef = useRef<HTMLInputElement>(null);
+
+    const props = visualization.properties || {};
+    const currentText = (props["data.text"] as string) || "";
+    const currentSize = (props["data.height"] as number) || 20;
+    const currentWeight = (props["data.fontWeight"] as number) || 400;
+    const currentAlign = (props["data.align"] as string) || "left";
+
     return (
-        <Stack>
+        <Stack spacing={4}>
+
+            {/* 1) Text Content */}
             <Stack>
-                <Text>Text Size</Text>
+                <Text>Text Content</Text>
+                <Input
+                    ref={textRef}
+                    value={currentText}
+                    placeholder="Enter your message..."
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        sectionApi.changeVisualizationProperties({
+                            visualization: visualization.id,
+                            attribute: "data.text",
+                            value: e.target.value,
+                        })
+                    }
+                />
+            </Stack>
+
+            {/* 2) Font Size */}
+            <Stack>
+                <Text>Font Size (px)</Text>
                 <NumberInput
-                    value={visualization.properties["data.height"] || 20}
-                    max={100}
-                    min={20}
-                    step={2}
-                    onChange={(value1: string, value2: number) =>
+                    value={currentSize}
+                    min={8}
+                    max={200}
+                    step={1}
+                    onChange={(_, val) =>
                         sectionApi.changeVisualizationProperties({
                             visualization: visualization.id,
                             attribute: "data.height",
-                            value: value2,
+                            value: val,
                         })
                     }
                 >
@@ -44,13 +70,62 @@ export default function TextVisualisationproperties({
                     </NumberInputStepper>
                 </NumberInput>
             </Stack>
+
+            {/* 3) Font Weight */}
             <Stack>
-                <Text>Text Color </Text>
+                <Text>Font Weight</Text>
+                <NumberInput
+                    value={currentWeight}
+                    min={100}
+                    max={900}
+                    step={100}
+                    onChange={(_, val) =>
+                        sectionApi.changeVisualizationProperties({
+                            visualization: visualization.id,
+                            attribute: "data.fontWeight",
+                            value: val,
+                        })
+                    }
+                >
+                    <NumberInputField />
+                    <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                    </NumberInputStepper>
+                </NumberInput>
+            </Stack>
+
+            {/* 4) Text Color */}
+            <Stack>
+                <Text>Text Color</Text>
                 <ColorProperty
                     visualization={visualization}
                     title=""
-                    attribute=""
+                    attribute="data.color"
                 />
+            </Stack>
+
+            {/* 5) Alignment */}
+            <Stack>
+                <Text>Alignment</Text>
+                <Stack direction="row" spacing={2}>
+                    {["left", "center", "right"].map((align) => (
+                        <Button
+                            key={align}
+                            size="sm"
+                            variant={currentAlign === align ? "solid" : "outline"}
+                            onClick={() =>
+                                sectionApi.changeVisualizationProperties({
+                                    visualization: visualization.id,
+                                    attribute: "data.align",
+                                    value: align,
+                                })
+                            }
+                        >
+                            {align.charAt(0).toUpperCase() + align.slice(1)}
+                        </Button>
+                    ))}
+                </Stack>
             </Stack>
         </Stack>
     );

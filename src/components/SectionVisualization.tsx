@@ -80,10 +80,10 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
           <Marquee
             velocity={20}
             direction="rtl"
-            onFinish={() => {}}
+            onFinish={() => { }}
             resetAfterTries={200}
             scatterRandomly={false}
-            onInit={() => {}}
+            onInit={() => { }}
           >
             {section.visualizations.map((visualization) => {
               return (
