@@ -66,6 +66,8 @@ const BarGraph = ({
     chartData.splice(0, chartData.length, ...combined.map((c) => c.trace));
     allSeries.splice(0, allSeries.length, ...combined.map((c) => c.series));
   }
+
+
   return (
     <Stack h="100%" spacing={0} w="100%">
       {((visualization.showTitle !== undefined &&
@@ -90,15 +92,22 @@ const BarGraph = ({
                 },
                 autosize: true,
                 showlegend: false,
+                ...availableProperties.layout,
+
                 xaxis: {
                   automargin: true,
                   showgrid: false,
-                  type: "category",
-                  labels: {
-                    rotate: 0,
-                  },
+                  type: "linear",
                 },
-                ...availableProperties.layout,
+                yaxis: {
+                  automargin: true,
+                  type: "category",
+                  labels: { rotate: 0 },
+                },
+
+
+                // 2) horizontal bars → numeric on X, categories on Y in the exact order
+
               }}
               style={{ width: "100%", height: "100%" }}
               config={{

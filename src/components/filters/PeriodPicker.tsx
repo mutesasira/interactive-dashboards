@@ -6,9 +6,10 @@ const PeriodPicker = () => {
         <Stack position="relative" flex={1}>
             <Button
                 onClick={onToggle}
-                w="300px"
-                size="sm"
+                w="200px"
+                size="md"
                 variant="outline"
+                colorScheme="blue"
                 _hover={{ backgroundColor: "none" }}
             >
                 <Text>Period</Text>
@@ -23,8 +24,7 @@ const PeriodPicker = () => {
                     minW="800px"
                     minH="660px"
                     maxH="660px"
-                    // left="2px"
-                    // right={0}
+                    zIndex={9999}
                 >
                     <Box px="5px" alignSelf="flex-end" mb="-5px">
                         <Button

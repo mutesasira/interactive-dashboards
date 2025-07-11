@@ -13,6 +13,7 @@ import PeriodSelector from "../filters/PeriodSelector";
 import OrganisationUnitLevels from "../OrganisationUnitLevels";
 import OUTree from "../OUTree";
 import LoadingIndicator from "../LoadingIndicator";
+import OrgUnitPicker2 from "../filters/OrgUnitPicker2";
 
 const Categories = ({
     id,
@@ -156,7 +157,7 @@ export default function Filters({
         <Stack direction={alignment} spacing="20px">
             {items?.flatMap((i: string) => {
                 if (i === "organisations") {
-                    return <OrgUnitPicker key={i} />;
+                    return <OrgUnitPicker2 key={i} />;
                 }
                 if (i === "periods") {
                     return <PeriodPicker key={i} />;
