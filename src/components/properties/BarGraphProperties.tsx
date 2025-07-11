@@ -90,6 +90,7 @@ const BarGraphProperties = ({
                 <Th>Column</Th>
                 <Th>Rename</Th>
                 <Th>Color</Th>
+                <Th>Order</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -112,6 +113,16 @@ const BarGraphProperties = ({
                       visualization={visualization}
                       title=""
                       attribute={`data.${row}.bg`}
+                    />
+                  </Td>
+                  <Td w="100px">
+                    <NumberProperty
+                      visualization={visualization}
+                      title=""
+                      attribute={`data.${row}.position`}
+                      min={0}
+                      step={1}
+                      size="sm"
                     />
                   </Td>
                 </Tr>
