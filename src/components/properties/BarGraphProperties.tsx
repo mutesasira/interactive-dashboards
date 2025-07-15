@@ -104,7 +104,6 @@ const BarGraphProperties = ({
                     <TextProperty
                       visualization={visualization}
                       title=""
-                      // attribute={`${row}.name`}
                       attribute={`data.${row}.name`}
                     />
                   </Td>
