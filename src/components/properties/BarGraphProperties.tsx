@@ -53,9 +53,23 @@ const BarGraphProperties = ({
     uniq(flatten(visualizationData.map((d) => Object.keys(d))))
   );
 
-  // Debug logging to see what columns are available
-  console.log('BarGraph visualization data:', visualizationData.slice(0, 2));
-  console.log('BarGraph available columns:', columns);
+  // Create options for data elements/indicators available in the visualization
+  const dataElementOptions: Option[] = visualization.indicators.map(indicator => ({
+    label: indicator,
+    value: indicator,
+    id: indicator
+  }));
+
+  // Combine regular columns with data elements
+  const allFieldOptions: Option[] = [
+    ...columns,
+    ...dataElementOptions
+  ];
+
+  // Debug logging to see what options are available
+  console.log('BarGraph visualization indicators:', visualization.indicators);
+  console.log('BarGraph data element options:', dataElementOptions);
+  console.log('BarGraph all field options:', allFieldOptions);
 
   const specificValues: string[] = visualization.properties["specific"] || [];
 
@@ -887,7 +901,7 @@ const BarGraphProperties = ({
         attribute="data.thirdAxis.dataField"
         visualization={visualization}
         title="Line Data Field"
-        options={columns}
+        options={allFieldOptions}
       />
 
       <TextProperty

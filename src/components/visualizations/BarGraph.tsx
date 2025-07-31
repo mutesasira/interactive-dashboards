@@ -475,6 +475,10 @@ const BarGraph = ({
 
     // Add third axis line series if enabled
     if (thirdAxisEnabled && thirdAxisDataField && categories.length > 0) {
+      console.log('Creating third axis line for field:', thirdAxisDataField);
+      console.log('Categories:', categories);
+      console.log('Raw visualization data:', visualizationData);
+      
       // Extract line data from the visualization data
       const lineData = categories.map(category => {
         // Find the data point for this category
@@ -483,17 +487,43 @@ const BarGraph = ({
           const categoryValue = item[visualization.properties?.["category"]] || 
                               item.name || 
                               item.category || 
-                              item.ou;
+                              item.ou ||
+                              item['ou-name'];
           return categoryValue === category;
         });
         
-        if (dataPoint && dataPoint[thirdAxisDataField] !== undefined) {
-          const value = dataPoint[thirdAxisDataField];
-          const numValue = typeof value === 'number' ? value : Number(value);
-          return isNaN(numValue) ? 0 : numValue;
+        console.log(`Category: ${category}, Found data point:`, dataPoint);
+        
+        if (dataPoint) {
+          // First check if it's a direct field in the data
+          if (dataPoint[thirdAxisDataField] !== undefined) {
+            const value = dataPoint[thirdAxisDataField];
+            const numValue = typeof value === 'number' ? value : Number(value);
+            console.log(`Direct field value for ${category}:`, value, '-> parsed:', numValue);
+            return isNaN(numValue) ? 0 : numValue;
+          }
+          
+          // If it's a data element, check if there's a calculated value for it
+          // Data elements might be stored as calculated values in the processed data
+          if (visualization.indicators.includes(thirdAxisDataField)) {
+            // Look for the indicator value in various possible formats
+            const indicatorValue = dataPoint[`${thirdAxisDataField}_value`] || 
+                                 dataPoint[`${thirdAxisDataField}.value`] ||
+                                 dataPoint.value; // fallback to main value if it's the selected indicator
+            
+            if (indicatorValue !== undefined) {
+              const numValue = typeof indicatorValue === 'number' ? indicatorValue : Number(indicatorValue);
+              console.log(`Indicator value for ${category}:`, indicatorValue, '-> parsed:', numValue);
+              return isNaN(numValue) ? 0 : numValue;
+            }
+          }
         }
+        
+        console.log(`No value found for category: ${category}`);
         return 0;
       });
+      
+      console.log('Final line data:', lineData);
 
       // Format line values
       const formatLineValue = (value: any) => {
