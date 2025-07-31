@@ -19,15 +19,17 @@ import JsPDF from "jspdf";
 import { saveAs } from "file-saver";
 import { ChartProps } from "../../interfaces";
 import { $dashboard, $visualizationData } from "../../Store";
+import aiInsightsService, { DashboardData } from "../../services/aiInsightsService";
 
 interface InsightItem {
     id: string;
-    type: "trend" | "comparison" | "outlier" | "summary";
+    type: "trend" | "comparison" | "outlier" | "summary" | "recommendation";
     title: string;
     description: string;
     value?: string | number;
     confidence: "high" | "medium" | "low";
     recommendation?: string;
+    priority?: "high" | "medium" | "low";
 }
 
 const InsightsVisualization = ({
@@ -36,6 +38,7 @@ const InsightsVisualization = ({
 }: ChartProps) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [insights, setInsights] = useState<InsightItem[]>([]);
+    const [isAutoRegenerating, setIsAutoRegenerating] = useState(false);
     const toast = useToast();
     const insightsRef = useRef<HTMLDivElement>(null);
     const dashboard = useStore($dashboard);
@@ -53,6 +56,68 @@ const InsightsVisualization = ({
     const includeGeoComparisons = dataProperties?.["data.includeGeoComparisons"] !== false;
     const numberFormat = dataProperties?.["data.numberFormat"] || "standard";
     const insightFocus = dataProperties?.["data.insightFocus"] || "all";
+    const useAI = dataProperties?.["data.useAI"] !== false; // Enable AI by default
+    const aiApiKey = dataProperties?.["data.aiApiKey"] || "";
+
+    // AI-powered insight generation
+    const generateAIInsights = async (): Promise<InsightItem[]> => {
+        if (!useAI) {
+            return generateLocalInsights();
+        }
+
+        // Set API key if provided
+        if (aiApiKey) {
+            aiInsightsService.setApiKey(aiApiKey);
+        }
+
+        try {
+            // Prepare dashboard data for AI analysis
+            const dashboardData: DashboardData = {
+                visualizations: Object.entries(visualizationData).map(([vizId, data]) => {
+                    // Find the visualization metadata
+                    const vizSection = dashboard.sections?.find(section => 
+                        section.visualizations?.some(viz => viz.id === vizId)
+                    );
+                    const vizInfo = vizSection?.visualizations.find(viz => viz.id === vizId);
+                    
+                    return {
+                        id: vizId,
+                        title: vizInfo?.name || 'Untitled Visualization',
+                        type: vizInfo?.type || 'unknown',
+                        data: Array.isArray(data) ? data : []
+                    };
+                }).filter(viz => viz.data.length > 0), // Only include visualizations with data
+                metadata: {
+                    totalVisualizations: Object.keys(visualizationData).length,
+                    dashboardTitle: dashboard.name || 'Dashboard',
+                    dateRange: `Analysis generated: ${new Date().toLocaleString()}`
+                }
+            };
+
+            // Generate insights using AI
+            const aiInsights = await aiInsightsService.generateInsights(dashboardData);
+            
+            // Convert AI insights to InsightItem format
+            return aiInsights.map(insight => ({
+                id: insight.id,
+                type: insight.type,
+                title: insight.title,
+                description: insight.description,
+                value: insight.value,
+                confidence: insight.confidence,
+                recommendation: insight.recommendation,
+                priority: insight.priority
+            })).slice(0, maxInsights);
+
+        } catch (error) {
+            console.warn('AI insight generation failed, falling back to local analysis:', error);
+            return generateLocalInsights();
+        }
+    };
+
+    const generateLocalInsights = (): InsightItem[] => {
+        return generateInsights();
+    };
 
     const generateInsights = useMemo(() => {
         return (): InsightItem[] => {
@@ -1565,12 +1630,13 @@ const InsightsVisualization = ({
         try {
             // Simulate processing time
             await new Promise(resolve => setTimeout(resolve, 1000));
-            const newInsights = generateInsights();
+            const newInsights = await generateAIInsights();
             setInsights(newInsights);
 
+            const insightSource = useAI && aiInsightsService.isAvailable() ? "AI-powered" : "local";
             toast({
                 title: "Insights Generated",
-                description: `Generated ${newInsights.length} insights from your dashboard data.`,
+                description: `Generated ${newInsights.length} ${insightSource} insights from your dashboard data.`,
                 status: "success",
                 duration: 3000,
                 isClosable: true,
@@ -1659,7 +1725,17 @@ const InsightsVisualization = ({
             case "comparison": return "⚖️";
             case "outlier": return "⚠️";
             case "summary": return "📊";
+            case "recommendation": return "🎯";
             default: return "💡";
+        }
+    };
+
+    const getPriorityColor = (priority?: string) => {
+        switch (priority) {
+            case "high": return "red";
+            case "medium": return "orange";
+            case "low": return "blue";
+            default: return "gray";
         }
     };
 
@@ -1669,6 +1745,36 @@ const InsightsVisualization = ({
             handleGenerateInsights();
         }
     }, [autoGenerate, visualizationData]);
+
+    // Dynamic insights: regenerate when visualization data changes significantly
+    React.useEffect(() => {
+        const dataKeys = Object.keys(visualizationData);
+        const dataCount = dataKeys.reduce((sum, key) => {
+            const data = visualizationData[key];
+            return sum + (Array.isArray(data) ? data.length : 0);
+        }, 0);
+
+        // Only regenerate if we have insights and data has changed significantly
+        if (insights.length > 0 && useAI && dataCount > 0 && !isGenerating) {
+            setIsAutoRegenerating(true);
+            // Debounce the regeneration to avoid too frequent updates
+            const timeoutId = setTimeout(async () => {
+                try {
+                    const newInsights = await generateAIInsights();
+                    setInsights(newInsights);
+                    setIsAutoRegenerating(false);
+                } catch (error) {
+                    console.warn('Auto-regeneration failed:', error);
+                    setIsAutoRegenerating(false);
+                }
+            }, 3000); // 3 second delay
+
+            return () => {
+                clearTimeout(timeoutId);
+                setIsAutoRegenerating(false);
+            };
+        }
+    }, [visualizationData, useAI, insights.length, isGenerating]);
 
     return (
         <Box
@@ -1682,9 +1788,21 @@ const InsightsVisualization = ({
         >
             <VStack spacing={4} align="stretch">
                 <HStack justify="space-between" align="center">
-                    <Heading size="lg" color={textColor}>
-                        {title}
-                    </Heading>
+                    <HStack align="center">
+                        <Heading size="lg" color={textColor}>
+                            {title}
+                        </Heading>
+                        {isAutoRegenerating && (
+                            <Badge colorScheme="blue" fontSize="xs" ml={2}>
+                                Updating...
+                            </Badge>
+                        )}
+                        {useAI && aiInsightsService.isAvailable() && (
+                            <Badge colorScheme="purple" fontSize="xs" ml={2}>
+                                AI-Powered
+                            </Badge>
+                        )}
+                    </HStack>
                     <HStack>
                         <Tooltip label="Generate New Insights">
                             <IconButton
@@ -1748,6 +1866,11 @@ const InsightsVisualization = ({
                                                 </Text>
                                             </HStack>
                                             <HStack>
+                                                {insight.priority && (
+                                                    <Badge colorScheme={getPriorityColor(insight.priority)} size="sm">
+                                                        {insight.priority.toUpperCase()}
+                                                    </Badge>
+                                                )}
                                                 {insight.value && (
                                                     <Badge colorScheme="blue" variant="subtle">
                                                         {insight.value}
