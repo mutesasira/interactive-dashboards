@@ -4,14 +4,26 @@
  */
 
 interface DashboardData {
+  sections?: Array<{
+    id: string;
+    title: string;
+    visualizations: Array<{
+      id: string;
+      title: string;
+      type: string;
+      data: any[];
+    }>;
+  }>;
   visualizations: Array<{
     id: string;
     title: string;
     type: string;
+    sectionTitle?: string;
     data: any[];
   }>;
   metadata: {
     totalVisualizations: number;
+    totalSections?: number;
     dashboardTitle?: string;
     dateRange?: string;
     analysisType?: string;
@@ -113,24 +125,30 @@ class AIInsightsService {
    * Construct prompt for AI based on dashboard data
    */
   private constructPrompt(dashboardData: DashboardData): string {
-    const { visualizations, metadata } = dashboardData;
+    const { visualizations, sections, metadata } = dashboardData;
     
     let prompt = `Analyze this comprehensive dashboard data and provide 6-10 specific, detailed insights with real numbers and concrete analysis. DO NOT describe "data points" - analyze the actual patterns and relationships in the data.
 
 Dashboard: ${metadata.dashboardTitle || 'Analytics Dashboard'}
 Total Visualizations: ${metadata.totalVisualizations}
+Total Sections: ${metadata.totalSections || 0}
 ${metadata.dateRange ? `Date Range: ${metadata.dateRange}` : ''}
 
 GENERATE DETAILED INSIGHTS LIKE THIS EXAMPLE:
 "Boys outnumber girls in every region, with the gap widest in Lubombo (about 2,160) and narrowest in Shiselweni (about 1,524). Manzini leads in total enrollment (35,228 boys vs. 33,257 girls) while Shiselweni trails (24,967 vs. 23,443). Lubombo's roughly 9% gap stands out. Targeted girls' outreach there—and improving overall access in Shiselweni—could have the biggest impact."
 
+${sections && sections.length > 0 ? `
+SECTION ORGANIZATION:
+${sections.map((section, index) => `${index + 1}. ${section.title} (${section.visualizations.length} visualizations)`).join('\n')}
+` : ''}
+
 CROSS-VISUALIZATION ANALYSIS REQUIRED:
 `;
 
-    // Add detailed data for cross-analysis
+    // Add detailed data for cross-analysis including section context
     visualizations.forEach((viz, index) => {
       prompt += `
-${index + 1}. ${viz.title} (${viz.type})
+${index + 1}. ${viz.title} (${viz.type}) [Section: ${viz.sectionTitle || 'Unknown'}]
    Data Summary: ${this.summarizeVisualizationData(viz.data)}
    Full Data Structure: ${this.getDetailedDataStructure(viz.data)}
 `;
@@ -360,20 +378,29 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
    * Fallback insights when AI is not available - analyze actual data patterns
    */
   private generateFallbackInsights(dashboardData: DashboardData): AIInsight[] {
-    const { visualizations, metadata } = dashboardData;
+    const { visualizations, sections, metadata } = dashboardData;
     const insights: AIInsight[] = [];
     
-    console.log('Generating fallback insights for', visualizations.length, 'visualizations');
+    console.log('Generating fallback insights for', visualizations.length, 'visualizations across', metadata.totalSections, 'sections');
     
-    // First, try cross-section analysis
+    // First, analyze by sections if available
+    if (sections && sections.length > 0) {
+      const sectionInsight = this.analyzeSectionBasedPatterns(sections);
+      if (sectionInsight) {
+        insights.push(sectionInsight);
+      }
+    }
+    
+    // Then, cross-section analysis
     const crossSectionInsight = this.analyzeCrossSectionPatterns(visualizations);
     if (crossSectionInsight) {
       insights.push(crossSectionInsight);
     }
     
-    // Then analyze individual visualizations
-    for (const viz of visualizations.slice(0, 5)) {
-      console.log(`Analyzing viz: ${viz.title}, type: ${viz.type}, data length: ${viz.data?.length}`);
+    // Analyze ALL visualizations, not just a few
+    console.log('Analyzing ALL visualizations...');
+    for (const viz of visualizations) {
+      console.log(`Analyzing viz: ${viz.title} (Section: ${viz.sectionTitle}), type: ${viz.type}, data length: ${viz.data?.length}`);
       
       if (viz.data && viz.data.length > 0) {
         console.log('Sample data:', viz.data.slice(0, 2));
@@ -384,8 +411,8 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
         console.log('Generated insight:', dataInsight.title);
         insights.push(dataInsight);
         
-        // Limit to avoid too many insights
-        if (insights.length >= 4) break;
+        // Limit to top 8 insights to avoid overwhelming
+        if (insights.length >= 8) break;
       }
     }
     
@@ -448,6 +475,107 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     }
     
     return insights;
+  }
+  
+  /**
+   * Analyze patterns using section titles and organization
+   */
+  private analyzeSectionBasedPatterns(sections: any[]): AIInsight | null {
+    console.log('Analyzing section-based patterns for', sections.length, 'sections');
+    
+    // Group sections by theme/category based on titles
+    const sectionCategories = this.categorizeSections(sections);
+    
+    if (sectionCategories.infrastructure.length > 0 && sectionCategories.enrollment.length > 0) {
+      // Cross-category analysis between infrastructure and enrollment
+      const infraMetrics = this.extractSectionMetrics(sectionCategories.infrastructure);
+      const enrollmentMetrics = this.extractSectionMetrics(sectionCategories.enrollment);
+      
+      if (infraMetrics.length > 0 && enrollmentMetrics.length > 0) {
+        const avgInfra = infraMetrics.reduce((sum, m) => sum + m.value, 0) / infraMetrics.length;
+        const avgEnrollment = enrollmentMetrics.reduce((sum, m) => sum + m.value, 0) / enrollmentMetrics.length;
+        
+        return {
+          id: `section_analysis_${Date.now()}`,
+          type: 'comparison',
+          title: 'Infrastructure vs Enrollment Analysis',
+          description: `Dashboard shows clear sectional organization with ${sectionCategories.infrastructure.length} infrastructure sections averaging ${Math.round(avgInfra)}% and ${sectionCategories.enrollment.length} enrollment sections. ${avgInfra >= 75 ? 'Strong infrastructure foundation supports' : avgInfra >= 50 ? 'Moderate infrastructure levels correlate with' : 'Infrastructure gaps may be impacting'} enrollment patterns. Key infrastructure areas include ${infraMetrics.slice(0, 2).map(m => m.name).join(' and ')}.`,
+          value: `${Math.round(avgInfra)}% infra avg`,
+          confidence: 'high',
+          recommendation: `${avgInfra < 75 ? 'Prioritize infrastructure improvements, especially in ' + infraMetrics.sort((a, b) => a.value - b.value)[0]?.name + ', to support enrollment growth.' : 'Leverage strong infrastructure to expand enrollment programs and maintain quality standards.'}`,
+          priority: avgInfra < 75 ? 'high' : 'medium'
+        };
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Categorize sections based on their titles
+   */
+  private categorizeSections(sections: any[]) {
+    const categories = {
+      infrastructure: [] as any[],
+      enrollment: [] as any[],
+      performance: [] as any[],
+      resources: [] as any[],
+      other: [] as any[]
+    };
+    
+    sections.forEach(section => {
+      const title = section.title.toLowerCase();
+      
+      if (title.includes('water') || title.includes('infrastructure') || title.includes('facilities') || 
+          title.includes('soap') || title.includes('latrine') || title.includes('classroom')) {
+        categories.infrastructure.push(section);
+      } else if (title.includes('enrol') || title.includes('student') || title.includes('pupil') || 
+                 title.includes('admission') || title.includes('attendance')) {
+        categories.enrollment.push(section);
+      } else if (title.includes('performance') || title.includes('grade') || title.includes('score') || 
+                 title.includes('result') || title.includes('achievement')) {
+        categories.performance.push(section);
+      } else if (title.includes('teacher') || title.includes('staff') || title.includes('resource') || 
+                 title.includes('budget') || title.includes('funding')) {
+        categories.resources.push(section);
+      } else {
+        categories.other.push(section);
+      }
+    });
+    
+    console.log('Section categorization:', {
+      infrastructure: categories.infrastructure.map(s => s.title),
+      enrollment: categories.enrollment.map(s => s.title),
+      performance: categories.performance.map(s => s.title),
+      resources: categories.resources.map(s => s.title),
+      other: categories.other.map(s => s.title)
+    });
+    
+    return categories;
+  }
+  
+  /**
+   * Extract key metrics from sections
+   */
+  private extractSectionMetrics(sections: any[]) {
+    const metrics: Array<{name: string, value: number, section: string}> = [];
+    
+    sections.forEach(section => {
+      section.visualizations.forEach((viz: any) => {
+        if (viz.type === 'single' && viz.data.length === 1) {
+          const value = viz.data[0]?.value || Object.values(viz.data[0] || {}).find(v => typeof v === 'number') || 0;
+          if (value > 0) {
+            metrics.push({
+              name: viz.title,
+              value: value,
+              section: section.title
+            });
+          }
+        }
+      });
+    });
+    
+    return metrics;
   }
   
   /**

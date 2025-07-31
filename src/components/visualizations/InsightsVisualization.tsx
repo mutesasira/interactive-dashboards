@@ -71,24 +71,44 @@ const InsightsVisualization = ({
         }
 
         try {
-            // Prepare enhanced dashboard data for cross-visualization analysis
+            // Prepare enhanced dashboard data including ALL sections and their context
             const dashboardData: DashboardData = {
+                sections: dashboard.sections?.map(section => ({
+                    id: section.id,
+                    title: section.title || 'Untitled Section',
+                    visualizations: section.visualizations?.map(vizInfo => {
+                        const data = visualizationData[vizInfo.id];
+                        
+                        // Enhanced data preparation for cross-analysis
+                        const processedData = Array.isArray(data) ? data.map(item => {
+                            const processed = { ...item };
+                            processed._vizType = vizInfo.type || 'unknown';
+                            processed._vizTitle = vizInfo.name || 'Untitled';
+                            processed._sectionTitle = section.title || 'Untitled Section';
+                            return processed;
+                        }) : [];
+                        
+                        return {
+                            id: vizInfo.id,
+                            title: vizInfo.name || 'Untitled Visualization',
+                            type: vizInfo.type || 'unknown',
+                            data: processedData
+                        };
+                    }).filter(viz => viz && viz.data.length > 0) || []
+                })).filter(section => section.visualizations.length > 0) || [],
+                
+                // Legacy format for backward compatibility
                 visualizations: Object.entries(visualizationData).map(([vizId, data]) => {
-                    // Find the visualization metadata
                     const vizSection = dashboard.sections?.find(section => 
                         section.visualizations?.some(viz => viz.id === vizId)
                     );
                     const vizInfo = vizSection?.visualizations.find(viz => viz.id === vizId);
                     
-                    // Enhanced data preparation for cross-analysis
                     const processedData = Array.isArray(data) ? data.map(item => {
-                        // Standardize common field names for better cross-analysis
                         const processed = { ...item };
-                        
-                        // Add metadata about the visualization for context
                         processed._vizType = vizInfo?.type || 'unknown';
                         processed._vizTitle = vizInfo?.name || 'Untitled';
-                        
+                        processed._sectionTitle = vizSection?.title || 'Untitled Section';
                         return processed;
                     }) : [];
                     
@@ -96,11 +116,13 @@ const InsightsVisualization = ({
                         id: vizId,
                         title: vizInfo?.name || 'Untitled Visualization',
                         type: vizInfo?.type || 'unknown',
+                        sectionTitle: vizSection?.title || 'Untitled Section',
                         data: processedData
                     };
-                }).filter(viz => viz.data.length > 0), // Only include visualizations with data
+                }).filter(viz => viz.data.length > 0),
                 metadata: {
                     totalVisualizations: Object.keys(visualizationData).length,
+                    totalSections: dashboard.sections?.length || 0,
                     dashboardTitle: dashboard.name || 'Dashboard',
                     dateRange: `Analysis generated: ${new Date().toLocaleString()}`,
                     // Add additional context for cross-analysis
