@@ -53,6 +53,10 @@ const BarGraphProperties = ({
     uniq(flatten(visualizationData.map((d) => Object.keys(d))))
   );
 
+  // Debug logging to see what columns are available
+  console.log('BarGraph visualization data:', visualizationData.slice(0, 2));
+  console.log('BarGraph available columns:', columns);
+
   const specificValues: string[] = visualization.properties["specific"] || [];
 
   return (
