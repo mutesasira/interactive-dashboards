@@ -115,11 +115,14 @@ class AIInsightsService {
   private constructPrompt(dashboardData: DashboardData): string {
     const { visualizations, metadata } = dashboardData;
     
-    let prompt = `Analyze this comprehensive dashboard data and provide 6-10 actionable insights by finding relationships and patterns ACROSS visualizations. Look for connections between different charts and metrics.
+    let prompt = `Analyze this comprehensive dashboard data and provide 6-10 specific, detailed insights with real numbers and concrete analysis. DO NOT describe "data points" - analyze the actual patterns and relationships in the data.
 
 Dashboard: ${metadata.dashboardTitle || 'Analytics Dashboard'}
 Total Visualizations: ${metadata.totalVisualizations}
 ${metadata.dateRange ? `Date Range: ${metadata.dateRange}` : ''}
+
+GENERATE DETAILED INSIGHTS LIKE THIS EXAMPLE:
+"Boys outnumber girls in every region, with the gap widest in Lubombo (about 2,160) and narrowest in Shiselweni (about 1,524). Manzini leads in total enrollment (35,228 boys vs. 33,257 girls) while Shiselweni trails (24,967 vs. 23,443). Lubombo's roughly 9% gap stands out. Targeted girls' outreach there—and improving overall access in Shiselweni—could have the biggest impact."
 
 CROSS-VISUALIZATION ANALYSIS REQUIRED:
 `;
@@ -165,11 +168,18 @@ Please provide insights in this exact JSON format:
 
 MANDATORY REQUIREMENTS:
 - Each insight MUST reference data from at least 2 different visualizations
-- Include specific numbers, percentages, and comparisons
+- Include specific numbers, percentages, and comparisons (like "35,228 boys vs. 33,257 girls")
+- NO generic descriptions like "shows X data points" - analyze actual patterns
 - Identify cause-effect relationships where possible
 - Highlight unexpected correlations or patterns
 - Provide actionable recommendations based on cross-metric analysis
 - Use terms like "compared to", "correlation with", "in relation to", "while X shows Y"
+- Write insights like a data analyst would - specific, detailed, actionable
+
+EXAMPLES OF GOOD INSIGHTS:
+- "District A leads with 15,420 students while District B trails with 8,340 - a 85% difference"
+- "Female completion rates drop 12% in areas where infrastructure scores fall below 60%"
+- "Schools with teacher-student ratios above 1:30 show 18% lower test scores across all subjects"
 
 Focus on finding hidden patterns that only become visible when analyzing multiple charts together!`;
 
@@ -347,32 +357,234 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
   }
 
   /**
-   * Fallback insights when AI is not available
+   * Fallback insights when AI is not available - analyze actual data patterns
    */
   private generateFallbackInsights(dashboardData: DashboardData): AIInsight[] {
     const { visualizations, metadata } = dashboardData;
+    const insights: AIInsight[] = [];
     
-    return [
-      {
+    // Try to generate meaningful insights from actual data
+    for (const viz of visualizations.slice(0, 3)) {
+      const dataInsight = this.analyzeVisualizationData(viz);
+      if (dataInsight) {
+        insights.push(dataInsight);
+      }
+    }
+    
+    // If we couldn't generate meaningful insights, provide at least one useful fallback
+    if (insights.length === 0) {
+      insights.push({
         id: 'fallback_1',
         type: 'summary',
-        title: 'Dashboard Overview',
-        description: `This dashboard contains ${metadata.totalVisualizations} visualizations providing insights into your data.`,
+        title: 'Dashboard Ready for Analysis',
+        description: `Dashboard contains ${metadata.totalVisualizations} visualizations with data ready for AI-powered insights.`,
         confidence: 'high',
-        recommendation: 'Consider connecting to an AI service for more detailed insights.',
-        priority: 'low'
-      },
-      ...visualizations.slice(0, 3).map((viz, index) => ({
-        id: `fallback_viz_${index}`,
-        type: 'summary' as const,
-        title: `${viz.title} Analysis`,
-        description: `${viz.title} shows ${viz.data?.length || 0} data points. This ${viz.type} visualization provides valuable insights into your metrics.`,
-        value: viz.data?.length?.toString(),
-        confidence: 'medium' as const,
-        recommendation: 'Review the data trends and consider additional analysis.',
-        priority: 'medium' as const
-      }))
-    ];
+        recommendation: 'Connect to AI service for detailed cross-visualization analysis.',
+        priority: 'medium'
+      });
+    }
+    
+    return insights;
+  }
+  
+  /**
+   * Analyze individual visualization data to generate meaningful insights
+   */
+  private analyzeVisualizationData(viz: any): AIInsight | null {
+    if (!viz.data || viz.data.length === 0) return null;
+    
+    try {
+      // Look for gender-related patterns
+      const genderInsight = this.findGenderPatterns(viz);
+      if (genderInsight) return genderInsight;
+      
+      // Look for geographic patterns
+      const geoInsight = this.findGeographicPatterns(viz);
+      if (geoInsight) return geoInsight;
+      
+      // Look for performance patterns
+      const performanceInsight = this.findPerformancePatterns(viz);
+      if (performanceInsight) return performanceInsight;
+      
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+  
+  /**
+   * Find gender-related patterns in data
+   */
+  private findGenderPatterns(viz: any): AIInsight | null {
+    const data = viz.data;
+    
+    // Look for male/female data
+    const genderData = data.filter((item: any) => {
+      const keys = Object.keys(item).join(' ').toLowerCase();
+      const values = Object.values(item).join(' ').toLowerCase();
+      return keys.includes('male') || keys.includes('female') || 
+             values.includes('male') || values.includes('female') ||
+             keys.includes('boys') || keys.includes('girls') ||
+             values.includes('boys') || values.includes('girls');
+    });
+    
+    if (genderData.length > 1) {
+      // Find regions/locations
+      const regions = [...new Set(genderData.map((item: any) => 
+        item.orgUnit || item.region || item.location || item.name || 'Unknown'
+      ))];
+      
+      if (regions.length > 1) {
+        // Calculate gender gaps
+        const gaps = regions.map(region => {
+          const regionData = genderData.filter((item: any) => 
+            (item.orgUnit || item.region || item.location || item.name) === region
+          );
+          
+          const maleValues = regionData.filter((item: any) => {
+            const str = JSON.stringify(item).toLowerCase();
+            return str.includes('male') && !str.includes('female');
+          });
+          
+          const femaleValues = regionData.filter((item: any) => {
+            const str = JSON.stringify(item).toLowerCase();
+            return str.includes('female');
+          });
+          
+          const maleTotal = maleValues.reduce((sum: number, item: any) => {
+            const numValue = Object.values(item).find(v => typeof v === 'number');
+            return sum + (numValue as number || 0);
+          }, 0);
+          
+          const femaleTotal = femaleValues.reduce((sum: number, item: any) => {
+            const numValue = Object.values(item).find(v => typeof v === 'number');
+            return sum + (numValue as number || 0);
+          }, 0);
+          
+          return {
+            region,
+            male: maleTotal,
+            female: femaleTotal,
+            gap: maleTotal - femaleTotal,
+            total: maleTotal + femaleTotal
+          };
+        }).filter(gap => gap.male > 0 || gap.female > 0);
+        
+        if (gaps.length > 1) {
+          const maxGap = gaps.reduce((max, current) => 
+            Math.abs(current.gap) > Math.abs(max.gap) ? current : max
+          );
+          const minGap = gaps.reduce((min, current) => 
+            Math.abs(current.gap) < Math.abs(min.gap) ? current : min
+          );
+          
+          const highestTotal = gaps.reduce((max, current) => 
+            current.total > max.total ? current : max
+          );
+          
+          const gapDirection = maxGap.gap > 0 ? 'boys outnumber girls' : 'girls outnumber boys';
+          const gapPercentage = Math.round((Math.abs(maxGap.gap) / maxGap.total) * 100);
+          
+          return {
+            id: `gender_analysis_${Date.now()}`,
+            type: 'comparison',
+            title: 'Gender Enrollment Patterns by Region',
+            description: `${gapDirection.charAt(0).toUpperCase() + gapDirection.slice(1)} in every region, with the gap widest in ${maxGap.region} (about ${Math.abs(maxGap.gap).toLocaleString()}) and narrowest in ${minGap.region} (about ${Math.abs(minGap.gap).toLocaleString()}). ${highestTotal.region} leads in total enrollment (${highestTotal.male.toLocaleString()} vs. ${highestTotal.female.toLocaleString()}) while other regions trail. ${maxGap.region}'s roughly ${gapPercentage}% gap stands out.`,
+            value: `${gapPercentage}% gender gap`,
+            confidence: 'high',
+            recommendation: `Targeted ${maxGap.gap > 0 ? 'girls' : 'boys'} outreach in ${maxGap.region} and improving overall access in lower-performing regions could have the biggest impact.`,
+            priority: 'high'
+          };
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Find geographic patterns in data
+   */
+  private findGeographicPatterns(viz: any): AIInsight | null {
+    const data = viz.data;
+    
+    // Look for location-based data
+    const locationData = data.filter((item: any) => 
+      item.orgUnit || item.region || item.location || item.district
+    );
+    
+    if (locationData.length > 2) {
+      const locationStats = locationData.map((item: any) => {
+        const location = item.orgUnit || item.region || item.location || item.district || item.name;
+        const value = Object.values(item).find(v => typeof v === 'number') as number || 0;
+        
+        return { location, value };
+      }).filter(stat => stat.value > 0);
+      
+      if (locationStats.length > 2) {
+        locationStats.sort((a, b) => b.value - a.value);
+        
+        const highest = locationStats[0];
+        const lowest = locationStats[locationStats.length - 1];
+        const average = locationStats.reduce((sum, stat) => sum + stat.value, 0) / locationStats.length;
+        const gap = ((highest.value - lowest.value) / lowest.value) * 100;
+        
+        return {
+          id: `geographic_analysis_${Date.now()}`,
+          type: 'comparison',
+          title: 'Regional Performance Variation',
+          description: `${highest.location} leads with ${highest.value.toLocaleString()}, while ${lowest.location} records ${lowest.value.toLocaleString()} - a ${Math.round(gap)}% difference. The average across all regions is ${Math.round(average).toLocaleString()}, with ${locationStats.filter(s => s.value > average).length} regions above average.`,
+          value: `${Math.round(gap)}% variation`,
+          confidence: 'high',
+          recommendation: `Focus resources on improving performance in ${lowest.location} and scaling successful practices from ${highest.location}.`,
+          priority: 'high'
+        };
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Find performance patterns in data
+   */
+  private findPerformancePatterns(viz: any): AIInsight | null {
+    const data = viz.data;
+    
+    if (data.length > 3) {
+      const numericValues = data.map((item: any) => {
+        const value = Object.values(item).find(v => typeof v === 'number') as number;
+        const label = item.name || item.label || item.orgUnit || 'Item';
+        return { label, value };
+      }).filter(item => item.value > 0);
+      
+      if (numericValues.length > 3) {
+        numericValues.sort((a, b) => b.value - a.value);
+        
+        const total = numericValues.reduce((sum, item) => sum + item.value, 0);
+        const average = total / numericValues.length;
+        const highest = numericValues[0];
+        const lowest = numericValues[numericValues.length - 1];
+        
+        const topPerformers = numericValues.filter(item => item.value > average * 1.2);
+        const underPerformers = numericValues.filter(item => item.value < average * 0.8);
+        
+        return {
+          id: `performance_analysis_${Date.now()}`,
+          type: 'summary',
+          title: `${viz.title} Performance Overview`,
+          description: `Total of ${total.toLocaleString()} across ${numericValues.length} categories. ${highest.label} leads with ${highest.value.toLocaleString()} (${Math.round((highest.value/total)*100)}% of total), while ${lowest.label} has ${lowest.value.toLocaleString()}. ${topPerformers.length} categories exceed 120% of average performance.`,
+          value: `${topPerformers.length} top performers`,
+          confidence: 'medium',
+          recommendation: underPerformers.length > 0 ? 
+            `Investigate success factors from ${highest.label} and apply to underperforming areas like ${underPerformers[0]?.label}.` :
+            `Maintain current performance levels and consider scaling successful practices.`,
+          priority: 'medium'
+        };
+      }
+    }
+    
+    return null;
   }
 }
 
