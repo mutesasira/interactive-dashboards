@@ -363,15 +363,31 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     const { visualizations, metadata } = dashboardData;
     const insights: AIInsight[] = [];
     
+    console.log('Generating fallback insights for', visualizations.length, 'visualizations');
+    
     // Try to generate meaningful insights from actual data
-    for (const viz of visualizations.slice(0, 3)) {
+    for (const viz of visualizations.slice(0, 5)) {
+      console.log(`Analyzing viz: ${viz.title}, type: ${viz.type}, data length: ${viz.data?.length}`);
+      
+      if (viz.data && viz.data.length > 0) {
+        console.log('Sample data:', viz.data.slice(0, 2));
+      }
+      
       const dataInsight = this.analyzeVisualizationData(viz);
       if (dataInsight) {
+        console.log('Generated insight:', dataInsight.title);
         insights.push(dataInsight);
       }
     }
     
-    // If we couldn't generate meaningful insights, provide at least one useful fallback
+    // Generate basic insights even if detailed analysis fails
+    if (insights.length === 0) {
+      // Try to create at least some basic insights from the data
+      const basicInsights = this.generateBasicInsights(visualizations);
+      insights.push(...basicInsights);
+    }
+    
+    // Final fallback if nothing works
     if (insights.length === 0) {
       insights.push({
         id: 'fallback_1',
@@ -382,6 +398,44 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
         recommendation: 'Connect to AI service for detailed cross-visualization analysis.',
         priority: 'medium'
       });
+    }
+    
+    console.log('Generated', insights.length, 'fallback insights');
+    return insights;
+  }
+  
+  /**
+   * Generate basic insights when detailed analysis fails
+   */
+  private generateBasicInsights(visualizations: any[]): AIInsight[] {
+    const insights: AIInsight[] = [];
+    
+    for (const viz of visualizations.slice(0, 3)) {
+      if (!viz.data || viz.data.length === 0) continue;
+      
+      // Calculate basic statistics
+      const numericData = viz.data.map((item: any) => {
+        const numValue = Object.values(item).find(v => typeof v === 'number') as number;
+        return numValue || 0;
+      }).filter(val => val > 0);
+      
+      if (numericData.length > 0) {
+        const total = numericData.reduce((sum, val) => sum + val, 0);
+        const average = Math.round(total / numericData.length);
+        const max = Math.max(...numericData);
+        const min = Math.min(...numericData);
+        
+        insights.push({
+          id: `basic_${viz.id}_${Date.now()}`,
+          type: 'summary',
+          title: `${viz.title} Summary`,
+          description: `Total: ${total.toLocaleString()}, Average: ${average.toLocaleString()}, Range: ${min.toLocaleString()} to ${max.toLocaleString()}. Highest value is ${Math.round((max/total)*100)}% of total.`,
+          value: total.toLocaleString(),
+          confidence: 'medium',
+          recommendation: 'Review high and low performers for optimization opportunities.',
+          priority: 'medium'
+        });
+      }
     }
     
     return insights;
@@ -418,14 +472,20 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
   private findGenderPatterns(viz: any): AIInsight | null {
     const data = viz.data;
     
-    // Look for male/female data
+    console.log('Looking for gender patterns in', viz.title);
+    
+    // Look for male/female data - check all fields
     const genderData = data.filter((item: any) => {
-      const keys = Object.keys(item).join(' ').toLowerCase();
-      const values = Object.values(item).join(' ').toLowerCase();
-      return keys.includes('male') || keys.includes('female') || 
-             values.includes('male') || values.includes('female') ||
-             keys.includes('boys') || keys.includes('girls') ||
-             values.includes('boys') || values.includes('girls');
+      const allText = JSON.stringify(item).toLowerCase();
+      const hasGender = allText.includes('male') || allText.includes('female') || 
+                       allText.includes('boys') || allText.includes('girls') ||
+                       allText.includes('men') || allText.includes('women');
+      
+      if (hasGender) {
+        console.log('Found gender data:', item);
+      }
+      
+      return hasGender;
     });
     
     if (genderData.length > 1) {
