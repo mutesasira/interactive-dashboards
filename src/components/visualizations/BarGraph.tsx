@@ -152,7 +152,11 @@ const BarGraph = ({
 
   // Third axis (line) properties
   const thirdAxisEnabled = dataProperties?.["data.thirdAxis.enabled"] || false;
+  const thirdAxisDataSource = dataProperties?.["data.thirdAxis.dataSource"] || "direct";
   const thirdAxisDataField = dataProperties?.["data.thirdAxis.dataField"] || "";
+  const thirdAxisDimensionField = dataProperties?.["data.thirdAxis.dimensionField"] || "";
+  const thirdAxisDataElement = dataProperties?.["data.thirdAxis.dataElement"] || "";
+  const thirdAxisCalculation = dataProperties?.["data.thirdAxis.calculation"] || "";
   const thirdAxisName = dataProperties?.["data.thirdAxis.name"] || "Line Series";
   const thirdAxisYAxisIndex = parseInt(dataProperties?.["data.thirdAxis.yAxisIndex"] || "1");
   const thirdAxisLineType = dataProperties?.["data.thirdAxis.lineType"] || "solid";
@@ -474,15 +478,15 @@ const BarGraph = ({
     }
 
     // Add third axis line series if enabled
-    if (thirdAxisEnabled && thirdAxisDataField && categories.length > 0) {
-      console.log('Creating third axis line for field:', thirdAxisDataField);
+    if (thirdAxisEnabled && categories.length > 0) {
+      console.log('Creating third axis line with source type:', thirdAxisDataSource);
       console.log('Categories:', categories);
       console.log('Raw visualization data:', visualizationData);
       
-      // Extract line data from the visualization data
+      // Extract line data based on the selected data source type
       const lineData = categories.map(category => {
         // Find the data point for this category
-        const dataPoint = visualizationData.find((item: any) => {
+        const dataPoints = visualizationData.filter((item: any) => {
           // Check multiple possible category field names
           const categoryValue = item[visualization.properties?.["category"]] || 
                               item.name || 
@@ -492,31 +496,73 @@ const BarGraph = ({
           return categoryValue === category;
         });
         
-        console.log(`Category: ${category}, Found data point:`, dataPoint);
+        console.log(`Category: ${category}, Found data points:`, dataPoints);
         
-        if (dataPoint) {
-          // First check if it's a direct field in the data
-          if (dataPoint[thirdAxisDataField] !== undefined) {
-            const value = dataPoint[thirdAxisDataField];
-            const numValue = typeof value === 'number' ? value : Number(value);
-            console.log(`Direct field value for ${category}:`, value, '-> parsed:', numValue);
-            return isNaN(numValue) ? 0 : numValue;
-          }
-          
-          // If it's a data element, check if there's a calculated value for it
-          // Data elements might be stored as calculated values in the processed data
-          if (visualization.indicators.includes(thirdAxisDataField)) {
-            // Look for the indicator value in various possible formats
-            const indicatorValue = dataPoint[`${thirdAxisDataField}_value`] || 
-                                 dataPoint[`${thirdAxisDataField}.value`] ||
-                                 dataPoint.value; // fallback to main value if it's the selected indicator
+        if (dataPoints.length === 0) return 0;
+        
+        // Handle different data source types
+        switch (thirdAxisDataSource) {
+          case 'direct':
+            if (!thirdAxisDataField) return 0;
             
-            if (indicatorValue !== undefined) {
-              const numValue = typeof indicatorValue === 'number' ? indicatorValue : Number(indicatorValue);
-              console.log(`Indicator value for ${category}:`, indicatorValue, '-> parsed:', numValue);
+            const directPoint = dataPoints[0];
+            if (directPoint[thirdAxisDataField] !== undefined) {
+              const value = directPoint[thirdAxisDataField];
+              const numValue = typeof value === 'number' ? value : Number(value);
+              console.log(`Direct field value for ${category}:`, value);
               return isNaN(numValue) ? 0 : numValue;
             }
-          }
+            break;
+            
+          case 'dimension':
+            if (!thirdAxisDimensionField || !thirdAxisDataElement) return 0;
+            
+            // Find the data point that matches the selected data element
+            const dimensionPoint = dataPoints.find(item => 
+              item[thirdAxisDimensionField] === thirdAxisDataElement
+            );
+            
+            if (dimensionPoint && dimensionPoint.value !== undefined) {
+              const value = dimensionPoint.value;
+              const numValue = typeof value === 'number' ? value : Number(value);
+              console.log(`Dimension value for ${category}:`, value);
+              return isNaN(numValue) ? 0 : numValue;
+            }
+            break;
+            
+          case 'calculation':
+            if (!thirdAxisCalculation || !thirdAxisCalculation.startsWith('calc:')) return 0;
+            
+            // Parse calculation: calc:numerator/denominator*100
+            const calcParts = thirdAxisCalculation.replace('calc:', '').split('/');
+            if (calcParts.length !== 2) return 0;
+            
+            const numeratorName = calcParts[0];
+            const denominatorPart = calcParts[1];
+            const denominatorName = denominatorPart.replace('*100', '');
+            
+            // Find the data points for numerator and denominator
+            const numeratorPoint = dataPoints.find(item => {
+              const seriesValue = item[visualization.properties?.["series"]] || item.series;
+              return seriesValue === numeratorName;
+            });
+            
+            const denominatorPoint = dataPoints.find(item => {
+              const seriesValue = item[visualization.properties?.["series"]] || item.series;
+              return seriesValue === denominatorName;
+            });
+            
+            if (numeratorPoint && denominatorPoint) {
+              const numeratorValue = typeof numeratorPoint.value === 'number' ? numeratorPoint.value : Number(numeratorPoint.value);
+              const denominatorValue = typeof denominatorPoint.value === 'number' ? denominatorPoint.value : Number(denominatorPoint.value);
+              
+              if (!isNaN(numeratorValue) && !isNaN(denominatorValue) && denominatorValue !== 0) {
+                const percentage = (numeratorValue / denominatorValue) * 100;
+                console.log(`Calculated percentage for ${category}: ${numeratorValue}/${denominatorValue}*100 = ${percentage}`);
+                return percentage;
+              }
+            }
+            break;
         }
         
         console.log(`No value found for category: ${category}`);
@@ -862,7 +908,8 @@ const BarGraph = ({
       patternSize, showTooltip, tooltipTrigger, tooltipBgColor, tooltipBorderColor, tooltipFontSize,
       chartWidth, chartHeight, maintainAspectRatio, fitContainer, gridLeft, gridRight, gridTop, gridBottom,
       chartTitle, showChartTitle, chartTitleFontSize, chartTitleColor, chartTitlePosition, chartTitleFontWeight,
-      thirdAxisEnabled, thirdAxisDataField, thirdAxisName, thirdAxisYAxisIndex, thirdAxisLineType, thirdAxisLineWidth,
+      thirdAxisEnabled, thirdAxisDataSource, thirdAxisDataField, thirdAxisDimensionField, thirdAxisDataElement, 
+      thirdAxisCalculation, thirdAxisName, thirdAxisYAxisIndex, thirdAxisLineType, thirdAxisLineWidth,
       thirdAxisColor, thirdAxisShowSymbol, thirdAxisSymbolType, thirdAxisSymbolSize, thirdAxisSmooth, thirdAxisShowValues,
       thirdAxisYAxisTitle, thirdAxisDecimalPlaces, thirdAxisSuffix]);
 

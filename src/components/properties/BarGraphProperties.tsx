@@ -60,16 +60,76 @@ const BarGraphProperties = ({
     id: indicator
   }));
 
-  // Combine regular columns with data elements
+  // Get unique values for dimension fields (like dx-name values)
+  const getDimensionValues = (dimensionField: string): Option[] => {
+    if (!dimensionField || !visualizationData.length) return [];
+    
+    const uniqueValues = uniq(
+      visualizationData
+        .map(item => item[dimensionField])
+        .filter(val => val && val !== '')
+    );
+    
+    return uniqueValues.map(value => ({
+      label: value,
+      value: value,
+      id: value
+    }));
+  };
+
+  // Create calculation options for percentage from two columns
+  const getCalculationOptions = (): Option[] => {
+    const seriesOptions = findUniqValue(
+      visualizationData,
+      visualization.properties["series"]
+    );
+    
+    if (seriesOptions.length >= 2) {
+      const calculations: Option[] = [];
+      
+      // Create percentage calculations for all possible pairs
+      for (let i = 0; i < seriesOptions.length; i++) {
+        for (let j = 0; j < seriesOptions.length; j++) {
+          if (i !== j) {
+            const numerator = seriesOptions[i];
+            const denominator = seriesOptions[j];
+            calculations.push({
+              label: `${numerator} / ${denominator} * 100 (%)`,
+              value: `calc:${numerator}/${denominator}*100`,
+              id: `calc_${i}_${j}`
+            });
+          }
+        }
+      }
+      
+      return calculations;
+    }
+    
+    return [];
+  };
+
+  // Combine all field options
+  const dimensionOptions = columns.filter(col => col.label?.includes('-name') || col.label?.includes('name'));
+  const calculationOptions = getCalculationOptions();
+  
   const allFieldOptions: Option[] = [
     ...columns,
-    ...dataElementOptions
+    ...dataElementOptions,
+    ...(calculationOptions.length > 0 ? [
+      { label: '--- Calculations ---', value: '', id: 'separator1' },
+      ...calculationOptions
+    ] : [])
   ];
 
-  // Debug logging to see what options are available
+  // Get dimension-specific values when a dimension is selected
+  const selectedDimensionField = visualization.properties["data.thirdAxis.dimensionField"];
+  const dimensionValues = selectedDimensionField ? getDimensionValues(selectedDimensionField) : [];
+
+  // Debug logging
   console.log('BarGraph visualization indicators:', visualization.indicators);
-  console.log('BarGraph data element options:', dataElementOptions);
-  console.log('BarGraph all field options:', allFieldOptions);
+  console.log('BarGraph series options:', findUniqValue(visualizationData, visualization.properties["series"]));
+  console.log('BarGraph calculation options:', calculationOptions);
+  console.log('BarGraph dimension values for', selectedDimensionField, ':', dimensionValues);
 
   const specificValues: string[] = visualization.properties["specific"] || [];
 
@@ -898,11 +958,56 @@ const BarGraphProperties = ({
       />
 
       <SelectProperty
-        attribute="data.thirdAxis.dataField"
+        attribute="data.thirdAxis.dataSource"
         visualization={visualization}
-        title="Line Data Field"
-        options={allFieldOptions}
+        title="Data Source Type"
+        options={[
+          { label: "Direct Field", value: "direct" },
+          { label: "Data Element from Dimension", value: "dimension" },
+          { label: "Calculated Percentage", value: "calculation" }
+        ]}
       />
+
+      {/* Direct field selection */}
+      {(!visualization.properties["data.thirdAxis.dataSource"] || visualization.properties["data.thirdAxis.dataSource"] === "direct") && (
+        <SelectProperty
+          attribute="data.thirdAxis.dataField"
+          visualization={visualization}
+          title="Line Data Field"
+          options={allFieldOptions}
+        />
+      )}
+
+      {/* Dimension-based selection */}
+      {visualization.properties["data.thirdAxis.dataSource"] === "dimension" && (
+        <>
+          <SelectProperty
+            attribute="data.thirdAxis.dimensionField"
+            visualization={visualization}
+            title="Dimension Field (e.g., dx-name)"
+            options={dimensionOptions}
+          />
+          
+          {selectedDimensionField && dimensionValues.length > 0 && (
+            <SelectProperty
+              attribute="data.thirdAxis.dataElement"
+              visualization={visualization}
+              title="Select Data Element/Indicator"
+              options={dimensionValues}
+            />
+          )}
+        </>
+      )}
+
+      {/* Calculation-based selection */}
+      {visualization.properties["data.thirdAxis.dataSource"] === "calculation" && (
+        <SelectProperty
+          attribute="data.thirdAxis.calculation"
+          visualization={visualization}
+          title="Percentage Calculation"
+          options={calculationOptions}
+        />
+      )}
 
       <TextProperty
         title="Line Name"
