@@ -14,3 +14,4 @@ export const SPECIAL_COLUMNS = [
     "columnCount",
     "columnTotal",
 ];
+

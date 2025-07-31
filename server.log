@@ -1,0 +1,51 @@
+yarn run v1.22.22
+warning ../../package.json: No license field
+$ d2-app-scripts start
+Generating internationalization strings... 
+No translatable strings found in directory ./src 
+Bootstrapping local appShell... 
+A local appShell exists, skipping bootstrap. Use --force to update. 
+Building app Minister's Dashboards... 
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Generating manifests... 
+ 
+[WARNING] Something is already running on port 3000, using 3001 instead. 
+ 
+Starting development server... 
+The app Minister's Dashboards is now available on port 3001 
+ 
+warning ../../../../package.json: No license field
+ Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ (node:42337) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ (node:42337) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+ [0;33mOne of your dependencies, babel-preset-react-app, is importing the
+"@babel/plugin-proposal-private-property-in-object" package without
+declaring it in its dependencies. This is currently working because
+"@babel/plugin-proposal-private-property-in-object" is already in your
+node_modules folder for unrelated reasons, but it [1mmay break at any time[0;33m.
+
+babel-preset-react-app is part of the create-react-app project, [1mwhich
+is not maintianed anymore[0;33m. It is thus unlikely that this bug will
+ever be fixed. Add "@babel/plugin-proposal-private-property-in-object" to
+your devDependencies to work around this error. This will make this message
+go away.[0m
+  
+ /Users/albertmutesasira/Projects/interactive-dashboards/node_modules/@dhis2/cli-helpers-engine/lib/makeEntryPoint.js:9
+    throw err
+    ^
+
+[Error: ENOENT: no such file or directory, stat '/Users/albertmutesasira/Projects/interactive-dashboards/src/components/visualizations/SingleValue.tsx.tmp.861.1753805838978'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/albertmutesasira/Projects/interactive-dashboards/src/components/visualizations/SingleValue.tsx.tmp.861.1753805838978'
+}
+
+Node.js v23.11.0
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

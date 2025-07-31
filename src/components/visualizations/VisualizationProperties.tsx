@@ -24,6 +24,8 @@ import DashboardTitleProperties from "../properties/DashboardTitleProperties";
 import { Stack } from "@chakra-ui/react";
 import DashboardListProperties from "../properties/DashboardListProperties";
 import DividerVisualization from "./DividerVisualization";
+import InsightsProperties from "../properties/InsightsProperties";
+import MultiTitleGaugeProperties from "../properties/MultiTitleGaugeProperties";
 type VizProps = {
   visualization: IVisualization;
 };
@@ -60,6 +62,8 @@ const VisualizationProperties = ({ visualization }: VizProps) => {
         <DashboardTitleProperties visualization={visualization} />
       ),
       dashboardList: <DashboardListProperties visualization={visualization} />,
+      insights: <InsightsProperties visualization={visualization} />,
+      multiTitleGauge: <MultiTitleGaugeProperties visualization={visualization} />,
     };
     if (visualizationType) {
       return allTypes[visualizationType] || null;

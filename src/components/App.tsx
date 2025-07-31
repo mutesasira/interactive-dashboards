@@ -57,10 +57,11 @@ const location = new ReactLocation<LocationGenerics>({
 });
 
 const sizes: { [k: number]: ScreenSize } = {
-    0: "xs",
-    1: "sm",
-    2: "md",
-    3: "lg",
+    0: "xs", // Mobile
+    1: "sm", // Tablet
+    2: "md", // Laptop/small desktop
+    3: "lg", // Desktop
+    4: "xl", // TV/large screens
 };
 
 const App = () => {
@@ -68,23 +69,9 @@ const App = () => {
     const { isLoading, isSuccess, isError, error, data } = useInitials(storage);
     const [isNotDesktop] = useMediaQuery(["(max-width: 992px)"]);
 
-    const [phone, tablet, laptop, desktop] = useMediaQuery([
-        "(max-width: 768px)",
-        "(min-width: 768px)",
-        "(min-width: 992px)",
-        "(min-width: 1200px)",
-    ]);
-
     useEffect(() => {
         storeApi.setIsNotDesktop(isNotDesktop);
     }, [isNotDesktop]);
-
-    useEffect(() => {
-        const index = [phone, tablet, laptop, desktop].lastIndexOf(true);
-        if (index >= 0 && index <= 3) {
-            sizeApi.set(sizes[index]);
-        }
-    }, [phone, tablet, laptop, desktop]);
 
     const routes: Route<LocationGenerics>[] = [
         {

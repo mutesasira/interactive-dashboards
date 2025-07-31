@@ -2,6 +2,7 @@ import { Text, Stack } from "@chakra-ui/react";
 import { useSearch } from "@tanstack/react-location";
 import { useStore } from "effector-react";
 import { fromPairs } from "lodash";
+import React from "react";
 import {
     ISection,
     IVisualization,
@@ -48,6 +49,8 @@ import TextVisualisation from "./TextVisualisation";
 import TreeMaps from "./TreeMaps";
 import DividerVisualization from "./DividerVisualization";
 import MicroPlanning from "./MicroPlanning";
+import InsightsVisualization from "./InsightsVisualization";
+import MultiTitleGauge from "./MultiTitleGauge";
 
 type VisualizationProps = {
     visualization: IVisualization;
@@ -311,6 +314,26 @@ export const getVisualization = (
             />
         ),
         divider: <DividerVisualization />,
+        insights: (
+            <InsightsVisualization
+                data={data}
+                section={section}
+                visualization={visualization}
+                {...otherProperties}
+                layoutProperties={layoutProperties}
+                dataProperties={dataProperties}
+            />
+        ),
+        multiTitleGauge: (
+            <MultiTitleGauge
+                data={data}
+                section={section}
+                visualization={visualization}
+                {...otherProperties}
+                layoutProperties={layoutProperties}
+                dataProperties={dataProperties}
+            />
+        ),
     };
     if (visualization.properties["display"] === "multiple") {
         return (
@@ -361,7 +384,7 @@ const Visualization = ({
     const dashboard = useStore($dashboard);
     const calculated = useStore($calculated);
     const { affected, optionSet } = search;
-    const { isLoading, isSuccess, data, isError, error } = useVisualization(
+    const { isLoading, isSuccess, data, isError } = useVisualization(
         metadata,
         dashboard.refreshInterval,
         globalFilters,

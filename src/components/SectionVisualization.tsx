@@ -20,12 +20,12 @@ import Marquee from "react-marquee-slider";
 import { useElementSize } from "usehooks-ts";
 import { dashboardApi, sectionApi } from "../Events";
 import { ISection } from "../interfaces";
-import { $dashboard, $store, isOpenApi } from "../Store";
+import { $dashboard, $store, $size, isOpenApi } from "../Store";
 import FullScreen from "./FullScreen";
+import SectionTitle from "./SectionTitle";
 import Carousel from "./visualizations/Carousel";
 import TabPanelVisualization from "./visualizations/TabPanelVisualization";
 import Visualization from "./visualizations/Visualization";
-import VisualizationTitle from "./visualizations/VisualizationTitle";
 
 const SectionVisualization = ({ section }: { section: ISection }) => {
   const dashboard = useStore($dashboard);
@@ -34,22 +34,8 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
   });
   const [squareRef, { height }] = useElementSize();
   const store = useStore($store);
-  const templateColumns = useBreakpointValue({
-    base: "auto",
-    sm: "auto",
-    md: "auto",
-    lg: `repeat(${dashboard.columns}, 1fr)`,
-  });
-  const templateRows = useBreakpointValue({
-    base: "auto",
-    sm: "auto",
-    md: "auto",
-    lg: `repeat(${dashboard.rows}, 1fr)`,
-  });
+  const currentSize = useStore($size);
 
-  function handleItemClick({ event, props, triggerEvent, data }: any) {
-    console.log(event, props, triggerEvent, data);
-  }
 
   function displayMenu(e: any) {
     show({
@@ -58,110 +44,182 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
   }
 
   const displays = {
-    carousel: <Carousel section={section} height={height} />,
+    carousel: (
+      <Stack h="100%" w="100%" spacing={0} overflow="hidden">
+        <SectionTitle section={section} />
+        <Box flex={1} overflow="hidden">
+          <Carousel section={section} height={height} />
+        </Box>
+      </Stack>
+    ),
     marquee: (
       <Stack
         key={section.id}
         bg={section.bg}
-        alignContent="center"
-        alignItems="center"
-        justifyContent="center"
-        justifyItems="center"
         w="100%"
         h="100%"
-        onClick={(e: MouseEvent<HTMLElement>) => {
-          if (e.detail === 2 && store.isAdmin) {
+        spacing={0}
+        overflow="hidden"
+        borderRadius={section.cornerStyle || (section.borderRadius ? `${section.borderRadius}px` : "0px")}
+        onDoubleClick={() => {
+          if (store.isAdmin) {
             sectionApi.setCurrentSection(section);
             isOpenApi.onOpen();
           }
         }}
       >
-        <Stack w="100%">
-          <Marquee
-            velocity={20}
-            direction="rtl"
-            onFinish={() => { }}
-            resetAfterTries={200}
-            scatterRandomly={false}
-            onInit={() => { }}
-          >
-            {section.visualizations.map((visualization) => {
-              return (
-                <Stack direction="row" key={visualization.id}>
-                  <Visualization
-                    section={section}
+        <SectionTitle section={section} />
+        <Stack
+          flex={1}
+          alignContent="center"
+          alignItems="center"
+          justifyContent="center"
+          justifyItems="center"
+          w="100%"
+          overflow="hidden"
+        >
+          <Stack w="100%" overflow="hidden">
+            <Marquee
+              velocity={section.marqueeSpeed || 50}
+              direction={(() => {
+                const dir = section.marqueeDirection || "left";
+                // Convert our direction to marquee library format
+                switch (dir) {
+                  case "left": return "rtl";
+                  case "right": return "ltr";
+                  case "up": return "ttb";
+                  case "down": return "btt";
+                  default: return "rtl";
+                }
+              })()}
+              onFinish={() => { }}
+              resetAfterTries={section.marqueeLoop !== false ? 200 : 1}
+              scatterRandomly={false}
+              onInit={() => { }}
+              pauseOnHover={section.marqueePauseOnHover !== false}
+            >
+              {section.visualizations.map((visualization) => {
+                const gapSize = `${section.marqueeGap || 20}px`;
+                return (
+                  <Stack 
+                    direction={section.marqueeDirection === "up" || section.marqueeDirection === "down" ? "column" : "row"} 
                     key={visualization.id}
-                    visualization={visualization}
-                  />
-                  <Box w="70px">&nbsp;</Box>
-                </Stack>
-              );
-            })}
-          </Marquee>
+                  >
+                    <Box 
+                      maxW="100%" 
+                      minW="0" 
+                      overflow="hidden"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Visualization
+                        section={section}
+                        key={visualization.id}
+                        visualization={visualization}
+                      />
+                    </Box>
+                    <Box 
+                      w={section.marqueeDirection === "up" || section.marqueeDirection === "down" ? "100%" : gapSize}
+                      h={section.marqueeDirection === "up" || section.marqueeDirection === "down" ? gapSize : "auto"}
+                    >
+                      &nbsp;
+                    </Box>
+                  </Stack>
+                );
+              })}
+            </Marquee>
+          </Stack>
         </Stack>
       </Stack>
     ),
     grid: (
-      <Grid
+      <Stack
         h="100%"
         w="100%"
         bg={section.bg}
-        key={section.id}
-        templateColumns={templateColumns}
-        templateRows={templateRows}
-        gap={`${dashboard.spacing}px`}
+        spacing={0}
+        overflow="hidden"
+        borderRadius={section.cornerStyle || (section.borderRadius ? `${section.borderRadius}px` : "0px")}
       >
-        {section.visualizations.map((visualization) => {
-          return (
-            <GridItem
-              colSpan={visualization.columns}
-              rowSpan={visualization.rows}
-              w="100%"
-              h="100%"
-              key={visualization.id}
-              bgColor={visualization.properties["layout.bg"]}
-            >
-              <Stack
-                alignItems="center"
-                justifyContent="center"
-                spacing={0}
-                p="0"
+        <SectionTitle section={section} />
+        <Grid
+          flex={1}
+          w="100%"
+          key={section.id}
+          templateColumns={`repeat(${dashboard.columns}, 1fr)`}
+          templateRows={`repeat(${dashboard.rows}, 1fr)`}
+          gap={`${dashboard.spacing}px`}
+          overflow="hidden"
+        >
+          {section.visualizations.map((visualization) => {
+            return (
+              <GridItem
+                colSpan={visualization.columns}
+                rowSpan={visualization.rows}
                 w="100%"
                 h="100%"
+                key={visualization.id}
+                bgColor={visualization.properties["layout.bg"]}
+                overflow="hidden"
               >
-                <Visualization
-                  key={visualization.id}
-                  visualization={visualization}
-                  section={section}
-                />
-              </Stack>
-            </GridItem>
-          );
-        })}
-      </Grid>
+                <Stack
+                  alignItems="center"
+                  justifyContent="center"
+                  spacing={0}
+                  p="0"
+                  w="100%"
+                  h="100%"
+                  overflow="hidden"
+                >
+                  <Visualization
+                    key={visualization.id}
+                    visualization={visualization}
+                    section={section}
+                  />
+                </Stack>
+              </GridItem>
+            );
+          })}
+        </Grid>
+      </Stack>
     ),
     normal: (
-      <Stack h="100%" w="100%" spacing={0} key={section.id} flex={1}>
-        {section.title && (
-          <VisualizationTitle section={section} title={section.title} />
-        )}
+      <Stack
+        h="100%"
+        w="100%"
+        spacing={0}
+        key={section.id}
+        flex={1}
+        bg={section.bg}
+        overflow="hidden"
+        borderRadius={section.cornerStyle || (section.borderRadius ? `${section.borderRadius}px` : "0px")}
+      >
+        <SectionTitle section={section} />
         <Stack
+          flex={1}
           alignItems={section.alignItems}
           justifyContent={section.justifyContent || "space-around"}
           justifyItems="center"
           direction={section.direction}
           w="100%"
-          h="100%"
-          bg={section.bg}
           spacing={section.spacing}
           p={section.padding}
+          overflow="hidden"
         >
           {section.visualizations.map((visualization) => (
-            <Visualization
-              key={visualization.id}
-              visualization={visualization}
-              section={section}
-            />
+            <Box 
+              key={visualization.id} 
+              maxW="100%" 
+              maxH="100%" 
+              overflow="hidden"
+            >
+              <Visualization
+                key={visualization.id}
+                visualization={visualization}
+                section={section}
+              />
+            </Box>
           ))}
         </Stack>
       </Stack>
@@ -179,7 +237,6 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
       onContextMenu={displayMenu}
       w="100%"
       h="100%"
-      // overflow="auto"
       spacing={0}
       ref={squareRef}
       id={section.id}

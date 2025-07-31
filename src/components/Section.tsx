@@ -19,7 +19,7 @@ import { GroupBase, Select } from "chakra-react-select";
 import { useStore } from "effector-react";
 import { ChangeEvent, DragEvent, useRef, useState } from "react";
 import { BiDuplicate } from "react-icons/bi";
-import { sectionApi } from "../Events";
+import { sectionApi, dashboardApi } from "../Events";
 import { IIndicator, ISection, IVisualization, Option } from "../interfaces";
 import { useNamespace } from "../Queries";
 import { $section, $settings, $store, $dashboard } from "../Store";
@@ -336,6 +336,145 @@ const Section = () => {
                                 obj={section}
                             />
 
+                            {/* Section Title Styling Properties */}
+                            {section.title && (
+                                <Stack spacing={3} p={4} bg="blue.50" borderRadius="md">
+                                    <Text fontWeight="bold" color="blue.700">Section Title Styling</Text>
+                                    
+                                    <Stack direction="row" spacing={4}>
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Font Size</Text>
+                                            <Input
+                                                value={section.properties?.["sectionTitle.fontSize"] || "1.6vh"}
+                                                placeholder="e.g., 1.6vh, 16px, 1.2rem"
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "properties",
+                                                        value: {
+                                                            ...section.properties,
+                                                            "sectionTitle.fontSize": e.target.value
+                                                        }
+                                                    })
+                                                }
+                                                size="sm"
+                                            />
+                                        </Stack>
+                                        
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Font Weight</Text>
+                                            <NumberInput
+                                                value={section.properties?.["sectionTitle.fontWeight"] || 600}
+                                                min={100}
+                                                max={900}
+                                                step={100}
+                                                size="sm"
+                                                onChange={(_, value: number) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "properties",
+                                                        value: {
+                                                            ...section.properties,
+                                                            "sectionTitle.fontWeight": value
+                                                        }
+                                                    })
+                                                }
+                                            >
+                                                <NumberInputField />
+                                                <NumberInputStepper>
+                                                    <NumberIncrementStepper />
+                                                    <NumberDecrementStepper />
+                                                </NumberInputStepper>
+                                            </NumberInput>
+                                        </Stack>
+                                    </Stack>
+                                    
+                                    <Stack direction="row" spacing={4}>
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Text Color</Text>
+                                            <Input
+                                                value={section.properties?.["sectionTitle.color"] || "#2D3748"}
+                                                placeholder="e.g., #FF0000, red, rgb(255,0,0)"
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "properties",
+                                                        value: {
+                                                            ...section.properties,
+                                                            "sectionTitle.color": e.target.value
+                                                        }
+                                                    })
+                                                }
+                                                size="sm"
+                                            />
+                                        </Stack>
+                                        
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Background</Text>
+                                            <Input
+                                                value={section.properties?.["sectionTitle.bg"] || "transparent"}
+                                                placeholder="e.g., #F0F0F0, white, transparent"
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "properties",
+                                                        value: {
+                                                            ...section.properties,
+                                                            "sectionTitle.bg": e.target.value
+                                                        }
+                                                    })
+                                                }
+                                                size="sm"
+                                            />
+                                        </Stack>
+                                    </Stack>
+                                    
+                                    <Stack direction="row" spacing={4}>
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Padding</Text>
+                                            <Input
+                                                value={section.properties?.["sectionTitle.padding"] || "8px 12px"}
+                                                placeholder="e.g., 8px 12px, 10px"
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "properties",
+                                                        value: {
+                                                            ...section.properties,
+                                                            "sectionTitle.padding": e.target.value
+                                                        }
+                                                    })
+                                                }
+                                                size="sm"
+                                            />
+                                        </Stack>
+                                        
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Text Align</Text>
+                                            <SelectField<ISection, Option>
+                                                options={[
+                                                    { label: "Left", value: "left" },
+                                                    { label: "Center", value: "center" },
+                                                    { label: "Right", value: "right" }
+                                                ]}
+                                                attribute="sectionTitle.textAlign"
+                                                obj={{
+                                                    "sectionTitle.textAlign": section.properties?.["sectionTitle.textAlign"] || "left"
+                                                } as any}
+                                                title=""
+                                                func={(params: any) => 
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "properties",
+                                                        value: {
+                                                            ...section.properties,
+                                                            "sectionTitle.textAlign": params.value
+                                                        }
+                                                    })
+                                                }
+                                                multiple={false}
+                                                labelField="label"
+                                                valueField="value"
+                                            />
+                                        </Stack>
+                                    </Stack>
+                                </Stack>
+                            )}
+
                             {dashboard.type === "fixed" && (
                                 <>
                                     <Stack direction="row" spacing="20px">
@@ -421,6 +560,33 @@ const Section = () => {
                                 obj={section}
                             />
 
+                            <NumberField<ISection>
+                                attribute="borderRadius"
+                                func={sectionApi.changeSectionAttribute}
+                                title="Border Radius (px)"
+                                obj={section}
+                                min={0}
+                                max={50}
+                                step={1}
+                            />
+
+                            <SelectField<ISection, Option>
+                                options={[
+                                    { label: "Sharp Corners", value: "0" },
+                                    { label: "Slightly Rounded", value: "4" },
+                                    { label: "Rounded", value: "8" },
+                                    { label: "Very Rounded", value: "16" },
+                                    { label: "Curved", value: "24" },
+                                ]}
+                                attribute="cornerStyle"
+                                obj={section}
+                                title="Corner Style"
+                                func={sectionApi.changeSectionAttribute}
+                                multiple={false}
+                                labelField="label"
+                                valueField="value"
+                            />
+
                             <RadioField
                                 attribute="display"
                                 func={sectionApi.changeSectionAttribute}
@@ -454,6 +620,327 @@ const Section = () => {
                                     ["normal", "groups"]
                                 )}
                             />
+
+                            {/* Tab Animation Settings */}
+                            {section.display === "tabs" && (
+                                <Stack spacing={4} p={4} bg="blue.50" borderRadius="md">
+                                    <Text fontWeight="bold" color="blue.600">Tab Animation Settings</Text>
+                                    <Text fontSize="sm" color="gray.600">
+                                        Configure smooth transitions between tab visualizations
+                                    </Text>
+                                    
+                                    <CheckboxField<ISection>
+                                        attribute="enableTabAnimations"
+                                        func={sectionApi.changeSectionAttribute}
+                                        title="Enable Tab Animations"
+                                        obj={section}
+                                    />
+                                    
+                                    {section.enableTabAnimations !== false && (
+                                        <>
+                                            <Stack direction="row" spacing={4}>
+                                                <Stack flex={1}>
+                                                    <Text fontSize="sm">Animation Type</Text>
+                                                    <SelectField<ISection, Option>
+                                                        options={[
+                                                            { label: "Fade", value: "fade" },
+                                                            { label: "Slide", value: "slide" },
+                                                            { label: "Scale", value: "scale" },
+                                                            { label: "None", value: "none" }
+                                                        ]}
+                                                        attribute="tabAnimationType"
+                                                        obj={section}
+                                                        title=""
+                                                        func={sectionApi.changeSectionAttribute}
+                                                        multiple={false}
+                                                        labelField="label"
+                                                        valueField="value"
+                                                    />
+                                                </Stack>
+                                                
+                                                <Stack flex={1}>
+                                                    <Text fontSize="sm">Duration (ms)</Text>
+                                                    <NumberInput
+                                                        value={section.tabAnimationDuration || 300}
+                                                        min={100}
+                                                        max={2000}
+                                                        step={50}
+                                                        size="sm"
+                                                        onChange={(valueString, valueNumber) =>
+                                                            sectionApi.changeSectionAttribute({
+                                                                attribute: "tabAnimationDuration",
+                                                                value: valueNumber || 300
+                                                            })
+                                                        }
+                                                    >
+                                                        <NumberInputField />
+                                                        <NumberInputStepper>
+                                                            <NumberIncrementStepper />
+                                                            <NumberDecrementStepper />
+                                                        </NumberInputStepper>
+                                                    </NumberInput>
+                                                </Stack>
+                                            </Stack>
+                                            
+                                            <Stack direction="row" spacing={4} align="center" justify="space-between" p={3} bg="blue.25" borderRadius="md">
+                                                <Text fontSize="xs" color="blue.700">
+                                                    💡 <strong>Tip:</strong> Fade provides smooth opacity transitions, Slide creates directional movement, and Scale adds zoom effects.
+                                                </Text>
+                                            </Stack>
+                                        </>
+                                    )}
+                                </Stack>
+                            )}
+
+                            {/* Marquee Settings */}
+                            {section.display === "marquee" && (
+                                <Stack spacing={4} p={4} bg="purple.50" borderRadius="md">
+                                    <Text fontWeight="bold" color="purple.600">Marquee Scrolling Settings</Text>
+                                    <Text fontSize="sm" color="gray.600">
+                                        Configure continuous scrolling behavior for visualizations
+                                    </Text>
+                                    
+                                    <Stack direction="row" spacing={4}>
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Scroll Direction</Text>
+                                            <SelectField<ISection, Option>
+                                                options={[
+                                                    { label: "Left", value: "left" },
+                                                    { label: "Right", value: "right" },
+                                                    { label: "Up", value: "up" },
+                                                    { label: "Down", value: "down" }
+                                                ]}
+                                                attribute="marqueeDirection"
+                                                obj={section}
+                                                title=""
+                                                func={sectionApi.changeSectionAttribute}
+                                                multiple={false}
+                                                labelField="label"
+                                                valueField="value"
+                                            />
+                                        </Stack>
+                                        
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Speed (pixels/second)</Text>
+                                            <NumberInput
+                                                value={section.marqueeSpeed || 50}
+                                                min={10}
+                                                max={500}
+                                                step={10}
+                                                size="sm"
+                                                onChange={(valueString, valueNumber) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "marqueeSpeed",
+                                                        value: valueNumber || 50
+                                                    })
+                                                }
+                                            >
+                                                <NumberInputField />
+                                                <NumberInputStepper>
+                                                    <NumberIncrementStepper />
+                                                    <NumberDecrementStepper />
+                                                </NumberInputStepper>
+                                            </NumberInput>
+                                        </Stack>
+                                    </Stack>
+                                    
+                                    <Stack direction="row" spacing={4}>
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Gap Between Items (px)</Text>
+                                            <NumberInput
+                                                value={section.marqueeGap || 20}
+                                                min={0}
+                                                max={200}
+                                                step={5}
+                                                size="sm"
+                                                onChange={(valueString, valueNumber) =>
+                                                    sectionApi.changeSectionAttribute({
+                                                        attribute: "marqueeGap",
+                                                        value: valueNumber || 20
+                                                    })
+                                                }
+                                            >
+                                                <NumberInputField />
+                                                <NumberInputStepper>
+                                                    <NumberIncrementStepper />
+                                                    <NumberDecrementStepper />
+                                                </NumberInputStepper>
+                                            </NumberInput>
+                                        </Stack>
+                                        
+                                        <Stack flex={1} direction="column" spacing={2}>
+                                            <CheckboxField<ISection>
+                                                attribute="marqueePauseOnHover"
+                                                func={sectionApi.changeSectionAttribute}
+                                                title="Pause on Hover"
+                                                obj={section}
+                                            />
+                                            
+                                            <CheckboxField<ISection>
+                                                attribute="marqueeLoop"
+                                                func={sectionApi.changeSectionAttribute}
+                                                title="Continuous Loop"
+                                                obj={section}
+                                            />
+                                        </Stack>
+                                    </Stack>
+                                    
+                                    <Stack direction="row" spacing={4} align="center" justify="space-between" p={3} bg="purple.25" borderRadius="md">
+                                        <Text fontSize="xs" color="purple.700">
+                                            💡 <strong>Tip:</strong> Lower speeds (10-30) create smooth, readable scrolling. Higher speeds (100+) create dynamic movement effects.
+                                        </Text>
+                                    </Stack>
+                                </Stack>
+                            )}
+
+                            {/* Auto Grid Generation */}
+                            {section.display === "grid" && (
+                                <Stack spacing={4} p={4} bg="gray.50" borderRadius="md">
+                                    <Text fontWeight="bold" color="teal.600">Auto Grid Generator</Text>
+                                    <Text fontSize="sm" color="gray.600">
+                                        Automatically create a grid with the specified number of cells
+                                    </Text>
+                                    
+                                    <Stack direction="row" spacing={2} alignItems="end">
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Template</Text>
+                                            <Select
+                                                size="sm"
+                                                id="gridTemplate"
+                                                options={[
+                                                    { label: "2x2 Grid (4 cells)", value: "2x2" },
+                                                    { label: "3x2 Grid (6 cells)", value: "3x2" },
+                                                    { label: "3x3 Grid (9 cells)", value: "3x3" },
+                                                    { label: "4x3 Grid (12 cells)", value: "4x3" },
+                                                    { label: "Custom", value: "custom" }
+                                                ]}
+                                                defaultValue={{ label: "2x2 Grid (4 cells)", value: "2x2" }}
+                                                onChange={(selected) => {
+                                                    const cellCountInput = document.getElementById('gridCellCount') as HTMLInputElement;
+                                                    const gridColumnsInput = document.getElementById('gridColumns') as HTMLInputElement;
+                                                    
+                                                    if (selected?.value === "2x2") {
+                                                        if (cellCountInput) cellCountInput.value = "4";
+                                                        if (gridColumnsInput) gridColumnsInput.value = "2";
+                                                    } else if (selected?.value === "3x2") {
+                                                        if (cellCountInput) cellCountInput.value = "6";
+                                                        if (gridColumnsInput) gridColumnsInput.value = "3";
+                                                    } else if (selected?.value === "3x3") {
+                                                        if (cellCountInput) cellCountInput.value = "9";
+                                                        if (gridColumnsInput) gridColumnsInput.value = "3";
+                                                    } else if (selected?.value === "4x3") {
+                                                        if (cellCountInput) cellCountInput.value = "12";
+                                                        if (gridColumnsInput) gridColumnsInput.value = "4";
+                                                    }
+                                                }}
+                                            />
+                                        </Stack>
+                                        
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Cells</Text>
+                                            <NumberInput
+                                                defaultValue={4}
+                                                min={1}
+                                                max={24}
+                                                step={1}
+                                                size="sm"
+                                                id="gridCellCount"
+                                            >
+                                                <NumberInputField />
+                                                <NumberInputStepper>
+                                                    <NumberIncrementStepper />
+                                                    <NumberDecrementStepper />
+                                                </NumberInputStepper>
+                                            </NumberInput>
+                                        </Stack>
+                                        
+                                        <Stack flex={1}>
+                                            <Text fontSize="sm">Columns</Text>
+                                            <NumberInput
+                                                defaultValue={2}
+                                                min={1}
+                                                max={6}
+                                                step={1}
+                                                size="sm"
+                                                id="gridColumns"
+                                            >
+                                                <NumberInputField />
+                                                <NumberInputStepper>
+                                                    <NumberIncrementStepper />
+                                                    <NumberDecrementStepper />
+                                                </NumberInputStepper>
+                                            </NumberInput>
+                                        </Stack>
+                                        
+                                        <Button
+                                            size="sm"
+                                            colorScheme="teal"
+                                            onClick={() => {
+                                                const cellCountInput = document.getElementById('gridCellCount') as HTMLInputElement;
+                                                const gridColumnsInput = document.getElementById('gridColumns') as HTMLInputElement;
+                                                const cellCount = parseInt(cellCountInput?.value || '4');
+                                                const gridColumns = parseInt(gridColumnsInput?.value || '2');
+                                                
+                                                // Calculate grid layout
+                                                const gridRows = Math.ceil(cellCount / gridColumns);
+                                                
+                                                // Create new visualizations with better defaults
+                                                const newVisualizations: IVisualization[] = [];
+                                                for (let i = 0; i < cellCount; i++) {
+                                                    const id = generateUid();
+                                                    const visualization: IVisualization = {
+                                                        id,
+                                                        indicators: [],
+                                                        type: "single",
+                                                        name: `Cell ${i + 1}`,
+                                                        properties: {
+                                                            "data.prefix": "",
+                                                            "data.suffix": "",
+                                                            "data.format.style": "decimal",
+                                                            "data.format.notation": "standard",
+                                                            "data.format.maximumFractionDigits": 0,
+                                                            "data.format.fontSize": 2.5,
+                                                            "data.format.fontWeight": 600,
+                                                            "data.alignment": "column",
+                                                            "data.alignItems": "center",
+                                                            "data.justifyContent": "center",
+                                                            "data.title.fontSize": "1.2",
+                                                            "data.title.fontWeight": 500,
+                                                            "data.title.color": "#4A5568",
+                                                            "data.container.padding": "16px",
+                                                            "data.container.borderRadius": "8",
+                                                            "data.shadow.enabled": true,
+                                                            "data.shadow.blur": 4,
+                                                            "data.shadow.offsetY": 2,
+                                                            "data.shadow.color": "rgba(0,0,0,0.1)",
+                                                            "layout.bg": "white"
+                                                        },
+                                                        overrides: {},
+                                                        group: "",
+                                                        bg: "white",
+                                                        show: 1,
+                                                        order: "1",
+                                                        rows: 1,
+                                                        columns: 1,
+                                                        showTitle: true,
+                                                        displayTitle: true
+                                                    };
+                                                    newVisualizations.push(visualization);
+                                                }
+                                                
+                                                // Set the new visualizations
+                                                sectionApi.setVisualizations(newVisualizations);
+                                            }}
+                                        >
+                                            Generate Grid
+                                        </Button>
+                                    </Stack>
+                                    
+                                    <Text fontSize="xs" color="gray.500">
+                                        ⚠️ This will replace all existing visualizations in this section
+                                    </Text>
+                                </Stack>
+                            )}
                         </Stack>
                     )}
                     {section.visualizations.map(
