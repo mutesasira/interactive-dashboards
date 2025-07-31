@@ -125,7 +125,7 @@ const PeriodSelector = ({ selectedPeriods, onChange }: PickerProps) => {
   }, [fixedPeriodType, year, selectedPeriods]);
 
   return (
-    <Stack direction="row" p="2px" w="800px">
+    <Stack direction="row" p="2px" w="100%">
       <Stack
         flex={1}
         borderColor="gray.200"
@@ -220,7 +220,7 @@ const PeriodSelector = ({ selectedPeriods, onChange }: PickerProps) => {
                     </NumberInput>
                   </Stack>
                 </Stack>
-                <Stack overflow="auto" maxH="400px">
+                <Stack overflow="auto" maxH="300px">
                   {availableFixedPeriods.map((val) => (
                     <Text
                       key={val.id}
@@ -303,7 +303,7 @@ const PeriodSelector = ({ selectedPeriods, onChange }: PickerProps) => {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <Stack overflow="auto">
+              <Stack overflow="auto" maxH="300px">
                 {selectedPeriods.map(({ value, label }) => (
                   <Text
                     key={value}

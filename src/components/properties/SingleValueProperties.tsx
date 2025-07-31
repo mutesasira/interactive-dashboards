@@ -24,6 +24,7 @@ import SelectProperty from "./SelectProperty";
 import TextProperty from "./TextProperty";
 import NumberProperty from "./NumberProperty";
 import SwitchProperty from "./SwitchProperty";
+import ColorProperty from "./ColorProperty";
 import { useStore } from "effector-react";
 import { $visualizationData } from "../../Store";
 import { uniq, flatten } from "lodash";
@@ -221,11 +222,19 @@ const SingleValueProperties = ({
             />
             <NumberProperty
                 visualization={visualization}
-                max={4}
-                min={0}
+                max={60}
+                min={8}
                 step={1}
                 attribute="data.format.fontSize"
-                title="Value Font Size"
+                title="Value Font Size (px)"
+            />
+            <NumberProperty
+                visualization={visualization}
+                max={40}
+                min={8}
+                step={1}
+                attribute="data.title.fontSize"
+                title="Title Font Size (px)"
             />
             <NumberProperty
                 visualization={visualization}
@@ -457,6 +466,338 @@ const SingleValueProperties = ({
                     size="sm"
                 />
             </Stack>
+
+            {/* Enhanced Styling Properties */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Container Styling</Text>
+            
+            <TextProperty
+                visualization={visualization}
+                title="Container Padding"
+                attribute="data.container.padding"
+                placeholder="e.g., 4px, 8px 12px"
+            />
+
+            <TextProperty
+                visualization={visualization}
+                title="Container Margin"
+                attribute="data.container.margin"
+                placeholder="e.g., 0px, 4px 8px"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={50}
+                step={1}
+                attribute="data.container.borderRadius"
+                title="Border Radius (px)"
+            />
+
+            <ColorProperty
+                title="Border Color"
+                attribute="data.container.borderColor"
+                visualization={visualization}
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Border Style"
+                attribute="data.container.borderStyle"
+                options={[
+                    { label: "Solid", value: "solid" },
+                    { label: "Dashed", value: "dashed" },
+                    { label: "Dotted", value: "dotted" },
+                    { label: "Double", value: "double" },
+                    { label: "None", value: "none" }
+                ]}
+            />
+
+            {/* Shadow Properties */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Shadow Effects</Text>
+            
+            <SwitchProperty
+                visualization={visualization}
+                title="Enable Shadow"
+                attribute="data.shadow.enabled"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={50}
+                step={1}
+                attribute="data.shadow.blur"
+                title="Shadow Blur (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={20}
+                step={1}
+                attribute="data.shadow.spread"
+                title="Shadow Spread (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={-20}
+                max={20}
+                step={1}
+                attribute="data.shadow.offsetX"
+                title="Shadow X Offset (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={-20}
+                max={20}
+                step={1}
+                attribute="data.shadow.offsetY"
+                title="Shadow Y Offset (px)"
+            />
+
+            <ColorProperty
+                title="Shadow Color"
+                attribute="data.shadow.color"
+                visualization={visualization}
+            />
+
+            {/* Gradient Properties */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Gradient Background</Text>
+            
+            <SwitchProperty
+                visualization={visualization}
+                title="Enable Gradient"
+                attribute="data.gradient.enabled"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Gradient Direction"
+                attribute="data.gradient.direction"
+                options={[
+                    { label: "Top to Bottom", value: "to bottom" },
+                    { label: "Bottom to Top", value: "to top" },
+                    { label: "Left to Right", value: "to right" },
+                    { label: "Right to Left", value: "to left" },
+                    { label: "Diagonal (Top-Left to Bottom-Right)", value: "to bottom right" },
+                    { label: "Diagonal (Top-Right to Bottom-Left)", value: "to bottom left" },
+                    { label: "Radial", value: "radial-gradient(circle" }
+                ]}
+            />
+
+            <ColorProperty
+                title="Gradient Start Color"
+                attribute="data.gradient.startColor"
+                visualization={visualization}
+            />
+
+            <ColorProperty
+                title="Gradient End Color"
+                attribute="data.gradient.endColor"
+                visualization={visualization}
+            />
+
+            {/* Animation Properties */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Animation Effects</Text>
+            
+            <SwitchProperty
+                visualization={visualization}
+                title="Enable Animation"
+                attribute="data.animation.enabled"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Animation Type"
+                attribute="data.animation.type"
+                options={[
+                    { label: "Pulse", value: "pulse" },
+                    { label: "Bounce", value: "bounce" },
+                    { label: "Glow", value: "glow" },
+                    { label: "Fade In", value: "fadeIn" }
+                ]}
+            />
+
+            <TextProperty
+                visualization={visualization}
+                title="Animation Duration"
+                attribute="data.animation.duration"
+                placeholder="e.g., 2s, 1500ms"
+            />
+
+            {/* Advanced Value Styling */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Value Text Styling</Text>
+            
+            <TextProperty
+                visualization={visualization}
+                title="Value Text Shadow"
+                attribute="data.value.textShadow"
+                placeholder="e.g., 2px 2px 4px rgba(0,0,0,0.5)"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Value Font Family"
+                attribute="data.value.fontFamily"
+                options={[
+                    { label: "Inherit", value: "inherit" },
+                    { label: "Arial", value: "Arial, sans-serif" },
+                    { label: "Helvetica", value: "Helvetica, sans-serif" },
+                    { label: "Times New Roman", value: "Times New Roman, serif" },
+                    { label: "Georgia", value: "Georgia, serif" },
+                    { label: "Courier New", value: "Courier New, monospace" },
+                    { label: "Roboto", value: "Roboto, sans-serif" },
+                    { label: "Open Sans", value: "Open Sans, sans-serif" }
+                ]}
+            />
+
+            <TextProperty
+                visualization={visualization}
+                title="Value Letter Spacing"
+                attribute="data.value.letterSpacing"
+                placeholder="e.g., normal, 1px, 0.1em"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0.8}
+                max={3}
+                step={0.1}
+                attribute="data.value.lineHeight"
+                title="Value Line Height"
+            />
+
+            {/* Advanced Title Styling */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Title Text Styling</Text>
+            
+            <TextProperty
+                visualization={visualization}
+                title="Title Text Shadow"
+                attribute="data.title.textShadow"
+                placeholder="e.g., 1px 1px 2px rgba(0,0,0,0.3)"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Title Font Family"
+                attribute="data.title.fontFamily"
+                options={[
+                    { label: "Inherit", value: "inherit" },
+                    { label: "Arial", value: "Arial, sans-serif" },
+                    { label: "Helvetica", value: "Helvetica, sans-serif" },
+                    { label: "Times New Roman", value: "Times New Roman, serif" },
+                    { label: "Georgia", value: "Georgia, serif" },
+                    { label: "Courier New", value: "Courier New, monospace" },
+                    { label: "Roboto", value: "Roboto, sans-serif" },
+                    { label: "Open Sans", value: "Open Sans, sans-serif" }
+                ]}
+            />
+
+            <TextProperty
+                visualization={visualization}
+                title="Title Letter Spacing"
+                attribute="data.title.letterSpacing"
+                placeholder="e.g., normal, 1px, 0.1em"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0.8}
+                max={3}
+                step={0.1}
+                attribute="data.title.lineHeight"
+                title="Title Line Height"
+            />
+
+            {/* Image Properties */}
+            <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Image Display</Text>
+            
+            <SwitchProperty
+                visualization={visualization}
+                title="Show Image"
+                attribute="data.image.show"
+            />
+
+            <TextProperty
+                visualization={visualization}
+                title="Image URL"
+                attribute="data.image.url"
+                placeholder="Enter image URL or path"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Image Position"
+                attribute="data.image.position"
+                options={[
+                    { label: "Top", value: "top" },
+                    { label: "Bottom", value: "bottom" },
+                    { label: "Left", value: "left" },
+                    { label: "Right", value: "right" },
+                    { label: "Background", value: "background" }
+                ]}
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={10}
+                max={500}
+                step={5}
+                attribute="data.image.width"
+                title="Image Width (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={10}
+                max={500}
+                step={5}
+                attribute="data.image.height"
+                title="Image Height (px)"
+            />
+
+            <SelectProperty
+                visualization={visualization}
+                title="Image Fit"
+                attribute="data.image.objectFit"
+                options={[
+                    { label: "Contain", value: "contain" },
+                    { label: "Cover", value: "cover" },
+                    { label: "Fill", value: "fill" },
+                    { label: "Scale Down", value: "scale-down" },
+                    { label: "None", value: "none" }
+                ]}
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={50}
+                step={1}
+                attribute="data.image.borderRadius"
+                title="Image Border Radius (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={50}
+                step={2}
+                attribute="data.image.spacing"
+                title="Image Spacing (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={1}
+                step={0.1}
+                attribute="data.image.opacity"
+                title="Image Opacity"
+            />
+
         </Stack>
     );
 };

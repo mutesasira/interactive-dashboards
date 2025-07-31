@@ -51,7 +51,12 @@ export default function DynamicDashboard({
 
     function generateDOM() {
         return dashboard.sections.map((section) => (
-            <Stack key={section.id} h="100%">
+            <Stack 
+                key={section.id} 
+                h="100%"
+                bg={section.bg}
+                borderRadius={section.cornerStyle || (section.borderRadius ? `${section.borderRadius}px` : "0px")}
+            >
                 <SectionVisualization section={section} />
             </Stack>
         ));

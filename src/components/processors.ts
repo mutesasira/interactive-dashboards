@@ -638,7 +638,6 @@ export const processGraphs = (
       if (options.series) {
         const grouped = groupBy(data, options.series);
         chartData = Object.entries(grouped).flatMap(([key, values]) => {
-          console.log(key);
           let currentValues = values;
           let others = {};
           if (
@@ -677,8 +676,8 @@ export const processGraphs = (
                   .map((k) =>
                     breakString(
                       options.metadata[`${k}.name`] ||
-                        options.dataProperties[`${k}.name`] ||
-                        k,
+                      options.dataProperties[`${k}.name`] ||
+                      k,
                       25
                     )
                   ),
@@ -779,8 +778,8 @@ export const processGraphs = (
               .map((k) =>
                 breakString(
                   options.metadata[`${k}.name`] ||
-                    options.dataProperties[`${k}.name`] ||
-                    k,
+                  options.dataProperties[`${k}.name`] ||
+                  k,
                   25
                 )
               ),
@@ -812,7 +811,6 @@ export const processGraphs = (
         "position",
         "asc"
       );
-      console.log(columns);
 
       const realColumns = columns.map(({ name }) => name);
       if (options.series) {
@@ -823,23 +821,23 @@ export const processGraphs = (
               availableProperties?.data?.orientation === "v"
                 ? realColumns
                 : columns.map(({ id }) => {
-                    const r = data.find(
-                      (num: any) =>
-                        num[options.series || ""] === se &&
-                        num[options.category || ""] === id
-                    );
-                    return r?.count || r?.value || r?.total;
-                  }),
+                  const r = data.find(
+                    (num: any) =>
+                      num[options.series || ""] === se &&
+                      num[options.category || ""] === id
+                  );
+                  return r?.count || r?.value || r?.total;
+                }),
             y:
               availableProperties?.data?.orientation === "v"
                 ? columns.map(({ id }) => {
-                    const r = data.find(
-                      (num: any) =>
-                        num[options.series || ""] === se &&
-                        num[options.category || ""] === id
-                    );
-                    return r?.count || r?.value || r?.total;
-                  })
+                  const r = data.find(
+                    (num: any) =>
+                      num[options.series || ""] === se &&
+                      num[options.category || ""] === id
+                  );
+                  return r?.count || r?.value || r?.total;
+                })
                 : realColumns,
             name: options.metadata?.[se]?.name || se,
             type: availableProperties?.data?.[se] || options.type,
@@ -862,19 +860,19 @@ export const processGraphs = (
               availableProperties?.data?.orientation === "v"
                 ? realColumns
                 : columns.map(({ id }) => {
-                    const r = data.find(
-                      (num: any) => num[options.category || ""] === id
-                    );
-                    return r?.count || r?.value || r?.total;
-                  }),
+                  const r = data.find(
+                    (num: any) => num[options.category || ""] === id
+                  );
+                  return r?.count || r?.value || r?.total;
+                }),
             y:
               availableProperties?.data?.orientation === "v"
                 ? columns.map(({ id }) => {
-                    const r = a.find(
-                      (num: any) => num[options.category || ""] === id
-                    );
-                    return r?.count || r?.value || r?.total;
-                  })
+                  const r = a.find(
+                    (num: any) => num[options.category || ""] === id
+                  );
+                  return r?.count || r?.value || r?.total;
+                })
                 : realColumns,
             type: options.type,
             ...availableProperties.data,
@@ -892,19 +890,19 @@ export const processGraphs = (
                 availableProperties?.data?.orientation === "v"
                   ? realColumns
                   : columns.map(({ id }) => {
-                      const r = data.find(
-                        (num: any) => num[options.category || ""] === id
-                      );
-                      return r?.count || r?.value || r?.total;
-                    }),
+                    const r = data.find(
+                      (num: any) => num[options.category || ""] === id
+                    );
+                    return r?.count || r?.value || r?.total;
+                  }),
               y:
                 availableProperties?.data?.orientation === "v"
                   ? columns.map(({ id }) => {
-                      const r = data.find(
-                        (num: any) => num[options.category || ""] === id
-                      );
-                      return r?.count || r?.value || r?.total;
-                    })
+                    const r = data.find(
+                      (num: any) => num[options.category || ""] === id
+                    );
+                    return r?.count || r?.value || r?.total;
+                  })
                   : realColumns,
               type: options.type,
               ...availableProperties.data,
@@ -1012,7 +1010,7 @@ export const processGaugeChart = (
   return chartData;
 };
 
-export const processDHIS2Indicator = () => {};
+export const processDHIS2Indicator = () => { };
 
 export const processOneDimension = (
   data: { [key: string]: any }[],

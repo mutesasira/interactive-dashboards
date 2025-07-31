@@ -8,12 +8,14 @@ export default function TextProperty({
     attribute,
     title,
     disabled,
-}: VizProps & { disabled?: boolean }) {
+    placeholder,
+}: VizProps & { disabled?: boolean; placeholder?: string }) {
     return (
         <Stack>
             <Text>{title}</Text>
             <Input
                 value={visualization.properties[attribute] || ""}
+                placeholder={placeholder}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     sectionApi.changeVisualizationProperties({
                         visualization: visualization.id,

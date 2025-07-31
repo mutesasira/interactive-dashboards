@@ -27,17 +27,31 @@ const Carousel = ({
         lazyLoad: "ondemand",
     };
     return (
-        <Slider {...settings}>
-            {section.visualizations.map((visualization) => (
-                <Stack h={`${height}px`} key={visualization.id}>
-                    <Visualization
+        <Stack
+            bg={section.bg}
+            borderRadius={section?.cornerStyle || (section?.borderRadius ? `${section.borderRadius}px` : "0px")}
+            w="100%"
+            h="100%"
+            overflow="hidden"
+        >
+            <Slider {...settings}>
+                {section.visualizations.map((visualization) => (
+                    <Stack 
+                        h={`${height}px`} 
                         key={visualization.id}
-                        visualization={visualization}
-                        section={section}
-                    />
-                </Stack>
-            ))}
-        </Slider>
+                        alignItems="center"
+                        justifyContent="center"
+                        w="100%"
+                    >
+                        <Visualization
+                            key={visualization.id}
+                            visualization={visualization}
+                            section={section}
+                        />
+                    </Stack>
+                ))}
+            </Slider>
+        </Stack>
     );
 };
 

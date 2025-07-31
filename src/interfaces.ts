@@ -149,7 +149,7 @@ export interface ISection extends BoxProps {
     title: string;
     visualizations: IVisualization[];
     direction: "row" | "column";
-    display: "normal" | "carousel" | "marquee" | "grid";
+    display: "normal" | "carousel" | "marquee" | "grid" | "tabs";
     carouselOver: string;
     colSpan: number;
     rowSpan: number;
@@ -164,6 +164,17 @@ export interface ISection extends BoxProps {
     isPrintable?: boolean;
     isFullscreenable?: boolean;
     displayTitle?: boolean;
+    borderRadius?: string;
+    cornerStyle?: string;
+    properties?: { [key: string]: any };
+    enableTabAnimations?: boolean;
+    tabAnimationType?: "fade" | "slide" | "scale" | "none";
+    tabAnimationDuration?: number;
+    marqueeDirection?: "left" | "right" | "up" | "down";
+    marqueeSpeed?: number;
+    marqueePauseOnHover?: boolean;
+    marqueeGap?: number;
+    marqueeLoop?: boolean;
 }
 export interface IFilter {
     id: string;

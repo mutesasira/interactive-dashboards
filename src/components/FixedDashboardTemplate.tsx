@@ -71,6 +71,7 @@ export default function FixedDashboardTemplate({
                     onDragOver={(e) => e.preventDefault()}
                     onDragEnd={drop}
                     bgColor={section.bg}
+                    borderRadius={section.cornerStyle || (section.borderRadius ? `${section.borderRadius}px` : "0px")}
                     key={section.id}
                     id={section.id}
                     colSpan={{ lg: section.colSpan, md: 1 }}
