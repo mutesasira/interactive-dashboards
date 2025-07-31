@@ -365,7 +365,13 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     
     console.log('Generating fallback insights for', visualizations.length, 'visualizations');
     
-    // Try to generate meaningful insights from actual data
+    // First, try cross-section analysis
+    const crossSectionInsight = this.analyzeCrossSectionPatterns(visualizations);
+    if (crossSectionInsight) {
+      insights.push(crossSectionInsight);
+    }
+    
+    // Then analyze individual visualizations
     for (const viz of visualizations.slice(0, 5)) {
       console.log(`Analyzing viz: ${viz.title}, type: ${viz.type}, data length: ${viz.data?.length}`);
       
@@ -377,6 +383,9 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
       if (dataInsight) {
         console.log('Generated insight:', dataInsight.title);
         insights.push(dataInsight);
+        
+        // Limit to avoid too many insights
+        if (insights.length >= 4) break;
       }
     }
     
@@ -442,28 +451,137 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
   }
   
   /**
+   * Analyze patterns across multiple sections/visualizations
+   */
+  private analyzeCrossSectionPatterns(visualizations: any[]): AIInsight | null {
+    console.log('Analyzing cross-section patterns across', visualizations.length, 'visualizations');
+    
+    // Separate single values from multi-data visualizations
+    const singleValues = visualizations.filter(viz => viz.type === 'single' && viz.data?.length === 1);
+    const multiData = visualizations.filter(viz => viz.data?.length > 1);
+    
+    console.log('Found', singleValues.length, 'single values and', multiData.length, 'multi-data vizs');
+    
+    if (singleValues.length >= 3) {
+      // Analyze infrastructure metrics together
+      const infrastructureMetrics = singleValues.filter(viz => {
+        const title = viz.title.toLowerCase();
+        return title.includes('water') || title.includes('soap') || title.includes('ratio') || title.includes('latrine');
+      });
+      
+      if (infrastructureMetrics.length >= 2) {
+        const values = infrastructureMetrics.map(viz => ({
+          name: viz.title,
+          value: viz.data[0]?.value || Object.values(viz.data[0] || {}).find(v => typeof v === 'number') || 0
+        }));
+        
+        const avgValue = values.reduce((sum, item) => sum + item.value, 0) / values.length;
+        const bestMetric = values.reduce((max, current) => current.value > max.value ? current : max);
+        const worstMetric = values.reduce((min, current) => current.value < min.value ? current : min);
+        
+        return {
+          id: `cross_section_${Date.now()}`,
+          type: 'comparison',
+          title: 'School Infrastructure Overview',
+          description: `Across key infrastructure metrics, ${bestMetric.name} performs best at ${Math.round(bestMetric.value)}%, while ${worstMetric.name} needs attention at ${Math.round(worstMetric.value)}%. Average infrastructure score is ${Math.round(avgValue)}%. ${avgValue >= 75 ? 'Overall infrastructure is in good condition.' : avgValue >= 50 ? 'Infrastructure shows mixed results with room for improvement.' : 'Significant infrastructure investment is needed.'}`,
+          value: `${Math.round(avgValue)}% avg`,
+          confidence: 'high',
+          recommendation: `Prioritize improvements in ${worstMetric.name} while maintaining ${bestMetric.name} standards. ${avgValue < 75 ? 'Consider a comprehensive infrastructure development plan.' : 'Focus on bringing all metrics to the level of top performers.'}`,
+          priority: avgValue >= 75 ? 'medium' : 'high'
+        };
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
    * Analyze individual visualization data to generate meaningful insights
    */
   private analyzeVisualizationData(viz: any): AIInsight | null {
     if (!viz.data || viz.data.length === 0) return null;
     
     try {
-      // Look for gender-related patterns
-      const genderInsight = this.findGenderPatterns(viz);
-      if (genderInsight) return genderInsight;
+      console.log(`Analyzing ${viz.title} (${viz.type}):`, viz.data);
       
-      // Look for geographic patterns
-      const geoInsight = this.findGeographicPatterns(viz);
-      if (geoInsight) return geoInsight;
+      // For bar charts and multi-data visualizations, look for patterns
+      if (viz.type === 'bar' || viz.data.length > 1) {
+        // Look for gender-related patterns first
+        const genderInsight = this.findGenderPatterns(viz);
+        if (genderInsight) return genderInsight;
+        
+        // Look for geographic patterns
+        const geoInsight = this.findGeographicPatterns(viz);
+        if (geoInsight) return geoInsight;
+        
+        // Look for performance patterns
+        const performanceInsight = this.findPerformancePatterns(viz);
+        if (performanceInsight) return performanceInsight;
+      }
       
-      // Look for performance patterns
-      const performanceInsight = this.findPerformancePatterns(viz);
-      if (performanceInsight) return performanceInsight;
+      // For single value visualizations, create contextual insights
+      if (viz.type === 'single' && viz.data.length === 1) {
+        const singleValueInsight = this.analyzeSingleValue(viz);
+        if (singleValueInsight) return singleValueInsight;
+      }
       
       return null;
     } catch (error) {
+      console.error('Error analyzing visualization:', error);
       return null;
     }
+  }
+  
+  /**
+   * Analyze single value metrics for contextual insights
+   */
+  private analyzeSingleValue(viz: any): AIInsight | null {
+    const data = viz.data[0];
+    const value = data.value || Object.values(data).find(v => typeof v === 'number') || 0;
+    
+    if (value <= 0) return null;
+    
+    // Create contextual insights based on the metric name and value
+    const title = viz.title.toLowerCase();
+    let insight: AIInsight | null = null;
+    
+    if (title.includes('water')) {
+      insight = {
+        id: `single_${viz.id}_${Date.now()}`,
+        type: 'summary',
+        title: 'Water Access Status',
+        description: `${Math.round(value)}% of schools have access to running water. ${value >= 80 ? 'This meets WHO standards for school water access.' : value >= 50 ? 'This is below optimal levels but shows moderate coverage.' : 'This indicates a critical need for water infrastructure investment.'}`,
+        value: `${Math.round(value)}%`,
+        confidence: 'high',
+        recommendation: value >= 80 ? 'Maintain current water infrastructure and expand to remaining schools.' : 'Prioritize water infrastructure development to improve student health and attendance.',
+        priority: value >= 80 ? 'medium' : 'high'
+      };
+    } else if (title.includes('soap')) {
+      insight = {
+        id: `single_${viz.id}_${Date.now()}`,
+        type: 'summary',
+        title: 'Hygiene Facilities Status',
+        description: `${Math.round(value)}% of schools have soap available. ${value >= 90 ? 'Excellent hygiene standards maintained.' : value >= 70 ? 'Good coverage but room for improvement.' : 'Significant gaps in basic hygiene provisions.'}`,
+        value: `${Math.round(value)}%`,
+        confidence: 'high',
+        recommendation: value >= 90 ? 'Continue regular soap supply monitoring.' : 'Increase soap supply frequency and establish regular monitoring systems.',
+        priority: value >= 70 ? 'medium' : 'high'
+      };
+    } else if (title.includes('ratio')) {
+      const ratioText = value > 30 ? 'overcrowded' : value > 20 ? 'manageable but high' : 'optimal';
+      insight = {
+        id: `single_${viz.id}_${Date.now()}`,
+        type: 'summary',
+        title: `${viz.title} Analysis`,
+        description: `Current ratio is ${value}:1, which is ${ratioText}. ${value > 30 ? 'This exceeds recommended ratios and may impact learning quality.' : value > 20 ? 'This is within acceptable range but monitoring is needed.' : 'This meets international standards for effective learning environments.'}`,
+        value: `${value}:1`,
+        confidence: 'high',
+        recommendation: value > 30 ? 'Urgent need for additional classrooms or facilities to reduce overcrowding.' : value > 20 ? 'Consider expansion planning for future growth.' : 'Maintain current standards and monitor for changes.',
+        priority: value > 30 ? 'high' : 'medium'
+      };
+    }
+    
+    return insight;
   }
   
   /**
@@ -489,37 +607,37 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     });
     
     if (genderData.length > 1) {
-      // Find regions/locations
+      console.log('Processing', genderData.length, 'gender data items');
+      
+      // Find regions/locations - use 'ou-name' field from your data
       const regions = [...new Set(genderData.map((item: any) => 
-        item.orgUnit || item.region || item.location || item.name || 'Unknown'
+        item['ou-name'] || item.orgUnit || item.region || item.location || item.name || 'Unknown'
       ))];
       
+      console.log('Found regions:', regions);
+      
       if (regions.length > 1) {
-        // Calculate gender gaps
+        // Calculate gender gaps using your data structure
         const gaps = regions.map(region => {
           const regionData = genderData.filter((item: any) => 
-            (item.orgUnit || item.region || item.location || item.name) === region
+            (item['ou-name'] || item.orgUnit || item.region || item.location || item.name) === region
           );
           
-          const maleValues = regionData.filter((item: any) => {
-            const str = JSON.stringify(item).toLowerCase();
-            return str.includes('male') && !str.includes('female');
-          });
+          console.log(`Region ${region} data:`, regionData);
           
-          const femaleValues = regionData.filter((item: any) => {
-            const str = JSON.stringify(item).toLowerCase();
-            return str.includes('female');
-          });
+          const maleData = regionData.find((item: any) => 
+            (item['qtoZUWBbhtd-name'] || '').toLowerCase().includes('male') && 
+            !(item['qtoZUWBbhtd-name'] || '').toLowerCase().includes('female')
+          );
           
-          const maleTotal = maleValues.reduce((sum: number, item: any) => {
-            const numValue = Object.values(item).find(v => typeof v === 'number');
-            return sum + (numValue as number || 0);
-          }, 0);
+          const femaleData = regionData.find((item: any) => 
+            (item['qtoZUWBbhtd-name'] || '').toLowerCase().includes('female')
+          );
           
-          const femaleTotal = femaleValues.reduce((sum: number, item: any) => {
-            const numValue = Object.values(item).find(v => typeof v === 'number');
-            return sum + (numValue as number || 0);
-          }, 0);
+          const maleTotal = maleData?.value || 0;
+          const femaleTotal = femaleData?.value || 0;
+          
+          console.log(`${region}: Male=${maleTotal}, Female=${femaleTotal}`);
           
           return {
             region,
