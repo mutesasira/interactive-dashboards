@@ -71,7 +71,7 @@ const InsightsVisualization = ({
         }
 
         try {
-            // Prepare dashboard data for AI analysis
+            // Prepare enhanced dashboard data for cross-visualization analysis
             const dashboardData: DashboardData = {
                 visualizations: Object.entries(visualizationData).map(([vizId, data]) => {
                     // Find the visualization metadata
@@ -80,17 +80,38 @@ const InsightsVisualization = ({
                     );
                     const vizInfo = vizSection?.visualizations.find(viz => viz.id === vizId);
                     
+                    // Enhanced data preparation for cross-analysis
+                    const processedData = Array.isArray(data) ? data.map(item => {
+                        // Standardize common field names for better cross-analysis
+                        const processed = { ...item };
+                        
+                        // Add metadata about the visualization for context
+                        processed._vizType = vizInfo?.type || 'unknown';
+                        processed._vizTitle = vizInfo?.name || 'Untitled';
+                        
+                        return processed;
+                    }) : [];
+                    
                     return {
                         id: vizId,
                         title: vizInfo?.name || 'Untitled Visualization',
                         type: vizInfo?.type || 'unknown',
-                        data: Array.isArray(data) ? data : []
+                        data: processedData
                     };
                 }).filter(viz => viz.data.length > 0), // Only include visualizations with data
                 metadata: {
                     totalVisualizations: Object.keys(visualizationData).length,
                     dashboardTitle: dashboard.name || 'Dashboard',
-                    dateRange: `Analysis generated: ${new Date().toLocaleString()}`
+                    dateRange: `Analysis generated: ${new Date().toLocaleString()}`,
+                    // Add additional context for cross-analysis
+                    analysisType: 'cross-visualization',
+                    focusAreas: [
+                        'gender-analysis',
+                        'geographic-patterns', 
+                        'performance-correlations',
+                        'resource-outcomes',
+                        'temporal-trends'
+                    ]
                 }
             };
 
