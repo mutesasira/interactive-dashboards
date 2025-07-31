@@ -150,6 +150,23 @@ const BarGraph = ({
   const baseTooltipFontSize = dataProperties?.["data.tooltip.fontSize"] || 12;
   const tooltipFontSize = baseTooltipFontSize;
 
+  // Third axis (line) properties
+  const thirdAxisEnabled = dataProperties?.["data.thirdAxis.enabled"] || false;
+  const thirdAxisDataField = dataProperties?.["data.thirdAxis.dataField"] || "";
+  const thirdAxisName = dataProperties?.["data.thirdAxis.name"] || "Line Series";
+  const thirdAxisYAxisIndex = parseInt(dataProperties?.["data.thirdAxis.yAxisIndex"] || "1");
+  const thirdAxisLineType = dataProperties?.["data.thirdAxis.lineType"] || "solid";
+  const thirdAxisLineWidth = dataProperties?.["data.thirdAxis.lineWidth"] || 2;
+  const thirdAxisColor = dataProperties?.["data.thirdAxis.color"] || "#ff6b6b";
+  const thirdAxisShowSymbol = dataProperties?.["data.thirdAxis.showSymbol"] !== false;
+  const thirdAxisSymbolType = dataProperties?.["data.thirdAxis.symbolType"] || "circle";
+  const thirdAxisSymbolSize = dataProperties?.["data.thirdAxis.symbolSize"] || 6;
+  const thirdAxisSmooth = dataProperties?.["data.thirdAxis.smooth"] || false;
+  const thirdAxisShowValues = dataProperties?.["data.thirdAxis.showValues"] || false;
+  const thirdAxisYAxisTitle = dataProperties?.["data.thirdAxis.yAxisTitle"] || "";
+  const thirdAxisDecimalPlaces = dataProperties?.["data.thirdAxis.decimalPlaces"] || 1;
+  const thirdAxisSuffix = dataProperties?.["data.thirdAxis.suffix"] || "";
+
   const option = useMemo(() => {
     if (!Array.isArray(visualizationData) || visualizationData.length === 0) {
       return {
@@ -456,6 +473,71 @@ const BarGraph = ({
       });
     }
 
+    // Add third axis line series if enabled
+    if (thirdAxisEnabled && thirdAxisDataField && categories.length > 0) {
+      // Extract line data from the visualization data
+      const lineData = categories.map(category => {
+        // Find the data point for this category
+        const dataPoint = visualizationData.find((item: any) => {
+          // Check multiple possible category field names
+          const categoryValue = item[visualization.properties?.["category"]] || 
+                              item.name || 
+                              item.category || 
+                              item.ou;
+          return categoryValue === category;
+        });
+        
+        if (dataPoint && dataPoint[thirdAxisDataField] !== undefined) {
+          const value = dataPoint[thirdAxisDataField];
+          const numValue = typeof value === 'number' ? value : Number(value);
+          return isNaN(numValue) ? 0 : numValue;
+        }
+        return 0;
+      });
+
+      // Format line values
+      const formatLineValue = (value: any) => {
+        if (value === null || value === undefined || value === '') {
+          return '0';
+        }
+        
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        if (isNaN(numericValue)) {
+          return '0';
+        }
+        
+        const formatted = numericValue.toFixed(thirdAxisDecimalPlaces);
+        return `${formatted}${thirdAxisSuffix}`;
+      };
+
+      const lineSeries = {
+        name: thirdAxisName,
+        type: 'line' as const,
+        yAxisIndex: thirdAxisYAxisIndex,
+        data: lineData,
+        lineStyle: {
+          type: thirdAxisLineType,
+          width: thirdAxisLineWidth,
+          color: thirdAxisColor
+        },
+        itemStyle: {
+          color: thirdAxisColor
+        },
+        symbol: thirdAxisShowSymbol ? thirdAxisSymbolType : 'none',
+        symbolSize: thirdAxisSymbolSize,
+        smooth: thirdAxisSmooth,
+        label: {
+          show: thirdAxisShowValues,
+          position: 'top',
+          formatter: (params: any) => formatLineValue(params.value),
+          fontSize: 10,
+          color: thirdAxisColor
+        }
+      };
+
+      seriesData.push(lineSeries);
+    }
+
     // Handle percentage stacking
     if (stackType === 'percentage' && seriesData.length > 0) {
       const categoryTotals: { [key: string]: number } = {};
@@ -551,7 +633,7 @@ const BarGraph = ({
         enterable: true,
         padding: [12, 18],
         formatter: (params: any) => {
-          const formatValue = (value: any) => {
+          const formatValue = (value: any, isLineSeries: boolean = false) => {
             // Handle null, undefined, or non-numeric values
             if (value === null || value === undefined || value === '') {
               return '0';
@@ -565,48 +647,57 @@ const BarGraph = ({
               return '0';
             }
             
-            let formatted = numericValue.toFixed(decimalPlaces);
-            if (showThousandsSeparator) {
-              // Apply custom thousands separator
-              switch (thousandsSeparatorType) {
-                case 'period':
-                  formatted = Number(formatted).toLocaleString('de-DE', {
-                    minimumFractionDigits: decimalPlaces,
-                    maximumFractionDigits: decimalPlaces
-                  });
-                  break;
-                case 'space':
-                  formatted = Number(formatted).toLocaleString('fr-FR', {
-                    minimumFractionDigits: decimalPlaces,
-                    maximumFractionDigits: decimalPlaces
-                  });
-                  break;
-                case 'comma':
-                default:
-                  formatted = Number(formatted).toLocaleString('en-US', {
-                    minimumFractionDigits: decimalPlaces,
-                    maximumFractionDigits: decimalPlaces
-                  });
-                  break;
+            if (isLineSeries) {
+              // Format line series values with their specific formatting
+              const formatted = numericValue.toFixed(thirdAxisDecimalPlaces);
+              return `${formatted}${thirdAxisSuffix}`;
+            } else {
+              // Format bar series values with regular formatting
+              let formatted = numericValue.toFixed(decimalPlaces);
+              if (showThousandsSeparator) {
+                // Apply custom thousands separator
+                switch (thousandsSeparatorType) {
+                  case 'period':
+                    formatted = Number(formatted).toLocaleString('de-DE', {
+                      minimumFractionDigits: decimalPlaces,
+                      maximumFractionDigits: decimalPlaces
+                    });
+                    break;
+                  case 'space':
+                    formatted = Number(formatted).toLocaleString('fr-FR', {
+                      minimumFractionDigits: decimalPlaces,
+                      maximumFractionDigits: decimalPlaces
+                    });
+                    break;
+                  case 'comma':
+                  default:
+                    formatted = Number(formatted).toLocaleString('en-US', {
+                      minimumFractionDigits: decimalPlaces,
+                      maximumFractionDigits: decimalPlaces
+                    });
+                    break;
+                }
               }
+              return `${valuePrefix}${formatted}${valueSuffix}`;
             }
-            return `${valuePrefix}${formatted}${valueSuffix}`;
           };
           
           if (Array.isArray(params)) {
             let result = `<div style="margin-bottom:4px">${params[0].name}</div>`;
             params.forEach((param: any) => {
-              const value = formatValue(param.value);
+              const isLineSeries = param.seriesType === 'line';
+              const value = formatValue(param.value, isLineSeries);
               result += `<div style="margin:2px 0">
-                <span style="display:inline-block;margin-right:4px;border-radius:10px;width:9px;height:9px;background-color:${param.color}"></span>
+                <span style="display:inline-block;margin-right:4px;border-radius:${isLineSeries ? '0px' : '10px'};width:9px;height:9px;background-color:${param.color}${isLineSeries ? ';border:1px solid ' + param.color : ''}"></span>
                 ${param.seriesName}: ${value}
               </div>`;
             });
             return result;
           } else {
-            const value = formatValue(params.value);
+            const isLineSeries = params.seriesType === 'line';
+            const value = formatValue(params.value, isLineSeries);
             return `<div>${params.name}</div>
-                   <div><span style="display:inline-block;margin-right:4px;border-radius:10px;width:9px;height:9px;background-color:${params.color}"></span>
+                   <div><span style="display:inline-block;margin-right:4px;border-radius:${isLineSeries ? '0px' : '10px'};width:9px;height:9px;background-color:${params.color}${isLineSeries ? ';border:1px solid ' + params.color : ''}"></span>
                    ${params.seriesName}: ${value}</div>`;
           }
         }
@@ -642,7 +733,62 @@ const BarGraph = ({
         }
       },
       
-      yAxis: {
+      yAxis: thirdAxisEnabled ? [
+        // Primary Y-axis (left)
+        {
+          type: isHorizontal ? 'category' : 'value',
+          data: isHorizontal ? categories : undefined,
+          name: yAxisTitle,
+          nameLocation: 'middle',
+          nameGap: 50,
+          position: 'left',
+          axisLabel: {
+            rotate: yAxisLabelRotation,
+            fontSize: 12,
+            formatter: (value: any) => {
+              return value;
+            },
+          },
+          axisLine: {
+            show: true
+          },
+          axisTick: {
+            show: true
+          },
+          splitLine: {
+            show: showGrid
+          }
+        },
+        // Secondary Y-axis (right) for line
+        {
+          type: 'value',
+          name: thirdAxisYAxisTitle,
+          nameLocation: 'middle',
+          nameGap: 50,
+          position: 'right',
+          axisLabel: {
+            fontSize: 12,
+            formatter: (value: any) => {
+              return `${value}${thirdAxisSuffix}`;
+            },
+          },
+          axisLine: {
+            show: true,
+            lineStyle: {
+              color: thirdAxisColor
+            }
+          },
+          axisTick: {
+            show: true,
+            lineStyle: {
+              color: thirdAxisColor
+            }
+          },
+          splitLine: {
+            show: false // Don't show grid lines for secondary axis to avoid confusion
+          }
+        }
+      ] : {
         type: isHorizontal ? 'category' : 'value',
         data: isHorizontal ? categories : undefined,
         name: yAxisTitle,
@@ -685,7 +831,10 @@ const BarGraph = ({
       shadowOffsetX, shadowOffsetY, shadowColor, patternEnabled, patternType, patternColor,
       patternSize, showTooltip, tooltipTrigger, tooltipBgColor, tooltipBorderColor, tooltipFontSize,
       chartWidth, chartHeight, maintainAspectRatio, fitContainer, gridLeft, gridRight, gridTop, gridBottom,
-      chartTitle, showChartTitle, chartTitleFontSize, chartTitleColor, chartTitlePosition, chartTitleFontWeight]);
+      chartTitle, showChartTitle, chartTitleFontSize, chartTitleColor, chartTitlePosition, chartTitleFontWeight,
+      thirdAxisEnabled, thirdAxisDataField, thirdAxisName, thirdAxisYAxisIndex, thirdAxisLineType, thirdAxisLineWidth,
+      thirdAxisColor, thirdAxisShowSymbol, thirdAxisSymbolType, thirdAxisSymbolSize, thirdAxisSmooth, thirdAxisShowValues,
+      thirdAxisYAxisTitle, thirdAxisDecimalPlaces, thirdAxisSuffix]);
 
   // Calculate responsive chart style based on sizing properties
   const chartStyle = {

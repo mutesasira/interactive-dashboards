@@ -870,6 +870,129 @@ const BarGraphProperties = ({
         step={0.1}
       />
 
+      {/* Third Axis (Line) Settings */}
+      <Text fontWeight="bold" fontSize="md" color="blue.600">Third Axis (Line)</Text>
+
+      <SwitchProperty
+        attribute="data.thirdAxis.enabled"
+        visualization={visualization}
+        title="Enable Third Axis Line"
+      />
+
+      <SelectProperty
+        attribute="data.thirdAxis.dataField"
+        visualization={visualization}
+        title="Line Data Field"
+        options={columns}
+      />
+
+      <TextProperty
+        title="Line Name"
+        attribute="data.thirdAxis.name"
+        visualization={visualization}
+        placeholder="e.g., Percentage"
+      />
+
+      <SelectProperty
+        attribute="data.thirdAxis.yAxisIndex"
+        visualization={visualization}
+        title="Y-Axis Side"
+        options={[
+          { label: "Left (Primary)", value: "0" },
+          { label: "Right (Secondary)", value: "1" }
+        ]}
+      />
+
+      <SelectProperty
+        attribute="data.thirdAxis.lineType"
+        visualization={visualization}
+        title="Line Type"
+        options={[
+          { label: "Solid", value: "solid" },
+          { label: "Dashed", value: "dashed" },
+          { label: "Dotted", value: "dotted" }
+        ]}
+      />
+
+      <NumberProperty
+        title="Line Width"
+        attribute="data.thirdAxis.lineWidth"
+        visualization={visualization}
+        min={1}
+        max={10}
+        step={1}
+      />
+
+      <ColorProperty
+        title="Line Color"
+        attribute="data.thirdAxis.color"
+        visualization={visualization}
+      />
+
+      <SwitchProperty
+        attribute="data.thirdAxis.showSymbol"
+        visualization={visualization}
+        title="Show Data Points"
+      />
+
+      <SelectProperty
+        attribute="data.thirdAxis.symbolType"
+        visualization={visualization}
+        title="Symbol Type"
+        options={[
+          { label: "Circle", value: "circle" },
+          { label: "Rectangle", value: "rect" },
+          { label: "Triangle", value: "triangle" },
+          { label: "Diamond", value: "diamond" },
+          { label: "Pin", value: "pin" },
+          { label: "Arrow", value: "arrow" }
+        ]}
+      />
+
+      <NumberProperty
+        title="Symbol Size"
+        attribute="data.thirdAxis.symbolSize"
+        visualization={visualization}
+        min={2}
+        max={20}
+        step={1}
+      />
+
+      <SwitchProperty
+        attribute="data.thirdAxis.smooth"
+        visualization={visualization}
+        title="Smooth Line"
+      />
+
+      <SwitchProperty
+        attribute="data.thirdAxis.showValues"
+        visualization={visualization}
+        title="Show Line Values"
+      />
+
+      <TextProperty
+        title="Right Y-Axis Title"
+        attribute="data.thirdAxis.yAxisTitle"
+        visualization={visualization}
+        placeholder="e.g., Percentage (%)"
+      />
+
+      <NumberProperty
+        title="Line Value Decimal Places"
+        attribute="data.thirdAxis.decimalPlaces"
+        visualization={visualization}
+        min={0}
+        max={6}
+        step={1}
+      />
+
+      <TextProperty
+        title="Line Value Suffix"
+        attribute="data.thirdAxis.suffix"
+        visualization={visualization}
+        placeholder="e.g., %"
+      />
+
       {/* Animation Settings */}
       <Text fontWeight="bold" fontSize="md" color="blue.600">Animation Settings</Text>
 
