@@ -449,10 +449,10 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     for (const viz of visualizations.slice(0, 3)) {
       if (!viz.data || viz.data.length === 0) continue;
       
-      // Calculate basic statistics
+      // Calculate basic statistics with NaN protection
       const numericData = viz.data.map((item: any) => {
         const numValue = Object.values(item).find(v => typeof v === 'number') as number;
-        return numValue || 0;
+        return isNaN(numValue) || numValue === null || numValue === undefined ? 0 : numValue;
       }).filter(val => val > 0);
       
       if (numericData.length > 0) {
@@ -461,11 +461,14 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
         const max = Math.max(...numericData);
         const min = Math.min(...numericData);
         
+        // Ensure no NaN values in percentage calculation
+        const percentageOfTotal = total > 0 ? Math.round((max/total)*100) : 0;
+        
         insights.push({
           id: `basic_${viz.id}_${Date.now()}`,
           type: 'summary',
           title: `${viz.title} Summary`,
-          description: `Total: ${total.toLocaleString()}, Average: ${average.toLocaleString()}, Range: ${min.toLocaleString()} to ${max.toLocaleString()}. Highest value is ${Math.round((max/total)*100)}% of total.`,
+          description: `Total: ${total.toLocaleString()}, Average: ${average.toLocaleString()}, Range: ${min.toLocaleString()} to ${max.toLocaleString()}. Highest value is ${percentageOfTotal}% of total.`,
           value: total.toLocaleString(),
           confidence: 'medium',
           recommendation: 'Review high and low performers for optimization opportunities.',
@@ -665,47 +668,70 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
    */
   private analyzeSingleValue(viz: any): AIInsight | null {
     const data = viz.data[0];
-    const value = data.value || Object.values(data).find(v => typeof v === 'number') || 0;
+    let value = data.value || Object.values(data).find(v => typeof v === 'number') || 0;
+    
+    // Handle NaN values
+    if (isNaN(value) || value === null || value === undefined) {
+      value = 0;
+    }
     
     if (value <= 0) return null;
     
-    // Create contextual insights based on the metric name and value
+    // Determine if this is a percentage or whole number
     const title = viz.title.toLowerCase();
+    const isPercentage = title.includes('%') || title.includes('percent') || title.includes('rate') || 
+                        (value <= 100 && (title.includes('coverage') || title.includes('access') || 
+                         title.includes('availability') || title.includes('ratio')));
+    
+    // Format the value appropriately
+    const formatValue = (val: number, isPercent: boolean) => {
+      if (isNaN(val)) return '0';
+      if (isPercent) {
+        return `${Math.round(val)}%`;
+      } else {
+        return Math.round(val).toLocaleString();
+      }
+    };
+    
+    const formattedValue = formatValue(value, isPercentage);
     let insight: AIInsight | null = null;
     
     if (title.includes('water')) {
+      const threshold = isPercentage ? value : (value / 100) * 100; // Treat as percentage if it looks like one
       insight = {
         id: `single_${viz.id}_${Date.now()}`,
         type: 'summary',
         title: 'Water Access Status',
-        description: `${Math.round(value)}% of schools have access to running water. ${value >= 80 ? 'This meets WHO standards for school water access.' : value >= 50 ? 'This is below optimal levels but shows moderate coverage.' : 'This indicates a critical need for water infrastructure investment.'}`,
-        value: `${Math.round(value)}%`,
+        description: `${formattedValue} of schools have access to running water. ${threshold >= 80 ? 'This meets WHO standards for school water access.' : threshold >= 50 ? 'This is below optimal levels but shows moderate coverage.' : 'This indicates a critical need for water infrastructure investment.'}`,
+        value: formattedValue,
         confidence: 'high',
-        recommendation: value >= 80 ? 'Maintain current water infrastructure and expand to remaining schools.' : 'Prioritize water infrastructure development to improve student health and attendance.',
-        priority: value >= 80 ? 'medium' : 'high'
+        recommendation: threshold >= 80 ? 'Maintain current water infrastructure and expand to remaining schools.' : 'Prioritize water infrastructure development to improve student health and attendance.',
+        priority: threshold >= 80 ? 'medium' : 'high'
       };
     } else if (title.includes('soap')) {
+      const threshold = isPercentage ? value : (value / 100) * 100;
       insight = {
         id: `single_${viz.id}_${Date.now()}`,
         type: 'summary',
         title: 'Hygiene Facilities Status',
-        description: `${Math.round(value)}% of schools have soap available. ${value >= 90 ? 'Excellent hygiene standards maintained.' : value >= 70 ? 'Good coverage but room for improvement.' : 'Significant gaps in basic hygiene provisions.'}`,
-        value: `${Math.round(value)}%`,
+        description: `${formattedValue} of schools have soap available. ${threshold >= 90 ? 'Excellent hygiene standards maintained.' : threshold >= 70 ? 'Good coverage but room for improvement.' : 'Significant gaps in basic hygiene provisions.'}`,
+        value: formattedValue,
         confidence: 'high',
-        recommendation: value >= 90 ? 'Continue regular soap supply monitoring.' : 'Increase soap supply frequency and establish regular monitoring systems.',
-        priority: value >= 70 ? 'medium' : 'high'
+        recommendation: threshold >= 90 ? 'Continue regular soap supply monitoring.' : 'Increase soap supply frequency and establish regular monitoring systems.',
+        priority: threshold >= 70 ? 'medium' : 'high'
       };
     } else if (title.includes('ratio')) {
-      const ratioText = value > 30 ? 'overcrowded' : value > 20 ? 'manageable but high' : 'optimal';
+      const ratioValue = Math.round(value);
+      const ratioText = ratioValue > 30 ? 'overcrowded' : ratioValue > 20 ? 'manageable but high' : 'optimal';
       insight = {
         id: `single_${viz.id}_${Date.now()}`,
         type: 'summary',
         title: `${viz.title} Analysis`,
-        description: `Current ratio is ${value}:1, which is ${ratioText}. ${value > 30 ? 'This exceeds recommended ratios and may impact learning quality.' : value > 20 ? 'This is within acceptable range but monitoring is needed.' : 'This meets international standards for effective learning environments.'}`,
-        value: `${value}:1`,
+        description: `Current ratio is ${ratioValue}:1, which is ${ratioText}. ${ratioValue > 30 ? 'This exceeds recommended ratios and may impact learning quality.' : ratioValue > 20 ? 'This is within acceptable range but monitoring is needed.' : 'This meets international standards for effective learning environments.'}`,
+        value: `${ratioValue}:1`,
         confidence: 'high',
-        recommendation: value > 30 ? 'Urgent need for additional classrooms or facilities to reduce overcrowding.' : value > 20 ? 'Consider expansion planning for future growth.' : 'Maintain current standards and monitor for changes.',
-        priority: value > 30 ? 'high' : 'medium'
+        recommendation: ratioValue > 30 ? 'Urgent need for additional classrooms or facilities to reduce overcrowding.' : ratioValue > 20 ? 'Consider expansion planning for future growth.' : 'Maintain current standards and monitor for changes.',
+        priority: ratioValue > 30 ? 'high' : 'medium'
       };
     }
     
@@ -789,16 +815,31 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
           );
           
           const gapDirection = maxGap.gap > 0 ? 'boys outnumber girls' : 'girls outnumber boys';
-          const gapPercentage = Math.round((Math.abs(maxGap.gap) / maxGap.total) * 100);
+          
+          // Fix NaN and percentage calculation
+          let gapPercentage = 0;
+          if (maxGap.total > 0 && !isNaN(maxGap.gap) && !isNaN(maxGap.total)) {
+            gapPercentage = Math.round((Math.abs(maxGap.gap) / maxGap.total) * 100);
+          }
+          
+          // Ensure all numbers are valid and formatted properly
+          const formatNumber = (num: number) => {
+            if (isNaN(num) || num === null || num === undefined) return '0';
+            return Math.round(num).toLocaleString();
+          };
+          
+          const lowestTotal = gaps.reduce((min, current) => 
+            current.total < min.total ? current : min
+          );
           
           return {
             id: `gender_analysis_${Date.now()}`,
             type: 'comparison',
             title: 'Gender Enrollment Patterns by Region',
-            description: `${gapDirection.charAt(0).toUpperCase() + gapDirection.slice(1)} in every region, with the gap widest in ${maxGap.region} (about ${Math.abs(maxGap.gap).toLocaleString()}) and narrowest in ${minGap.region} (about ${Math.abs(minGap.gap).toLocaleString()}). ${highestTotal.region} leads in total enrollment (${highestTotal.male.toLocaleString()} vs. ${highestTotal.female.toLocaleString()}) while other regions trail. ${maxGap.region}'s roughly ${gapPercentage}% gap stands out.`,
+            description: `${gapDirection.charAt(0).toUpperCase() + gapDirection.slice(1)} in every region, with the gap widest in ${maxGap.region} (about ${formatNumber(Math.abs(maxGap.gap))}) and narrowest in ${minGap.region} (about ${formatNumber(Math.abs(minGap.gap))}). ${highestTotal.region} leads in total enrollment (${formatNumber(highestTotal.male)} boys vs. ${formatNumber(highestTotal.female)} girls) while ${lowestTotal.region} trails (${formatNumber(lowestTotal.male)} vs. ${formatNumber(lowestTotal.female)}). ${maxGap.region}'s roughly ${gapPercentage}% gap stands out.`,
             value: `${gapPercentage}% gender gap`,
             confidence: 'high',
-            recommendation: `Targeted ${maxGap.gap > 0 ? 'girls' : 'boys'} outreach in ${maxGap.region} and improving overall access in lower-performing regions could have the biggest impact.`,
+            recommendation: `Targeted ${maxGap.gap > 0 ? 'girls' : 'boys'} outreach in ${maxGap.region} and improving overall access in ${lowestTotal.region} could have the biggest impact.`,
             priority: 'high'
           };
         }
