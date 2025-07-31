@@ -14,6 +14,8 @@ interface DashboardData {
     totalVisualizations: number;
     dashboardTitle?: string;
     dateRange?: string;
+    analysisType?: string;
+    focusAreas?: string[];
   };
 }
 
@@ -113,50 +115,63 @@ class AIInsightsService {
   private constructPrompt(dashboardData: DashboardData): string {
     const { visualizations, metadata } = dashboardData;
     
-    let prompt = `Analyze this dashboard data and provide 5-8 actionable insights and recommendations in JSON format.
+    let prompt = `Analyze this comprehensive dashboard data and provide 6-10 actionable insights by finding relationships and patterns ACROSS visualizations. Look for connections between different charts and metrics.
 
 Dashboard: ${metadata.dashboardTitle || 'Analytics Dashboard'}
 Total Visualizations: ${metadata.totalVisualizations}
 ${metadata.dateRange ? `Date Range: ${metadata.dateRange}` : ''}
 
-Visualization Data:
+CROSS-VISUALIZATION ANALYSIS REQUIRED:
 `;
 
+    // Add detailed data for cross-analysis
     visualizations.forEach((viz, index) => {
       prompt += `
 ${index + 1}. ${viz.title} (${viz.type})
    Data Summary: ${this.summarizeVisualizationData(viz.data)}
+   Full Data Structure: ${this.getDetailedDataStructure(viz.data)}
 `;
     });
 
+    // Add relationship analysis instructions
     prompt += `
+
+CRITICAL: Perform CROSS-VISUALIZATION ANALYSIS to find:
+1. **Gender/Demographic Patterns**: If you see male/female data across charts, compare enrollment rates, performance gaps, trends
+2. **Geographic Correlations**: Compare performance between regions/districts across different metrics
+3. **Time-based Relationships**: Identify trends that appear across multiple visualizations
+4. **Performance Correlations**: Link high/low performers across different indicators
+5. **Resource-Outcome Relationships**: Connect infrastructure/resource data with performance outcomes
+6. **Efficiency Patterns**: Compare input metrics (teachers, funding) with output metrics (enrollment, grades)
+
+EXAMPLES OF CROSS-ANALYSIS INSIGHTS:
+- "Districts with higher teacher-student ratios show 15% better learning outcomes"
+- "Female enrollment dropped 8% in regions where infrastructure scores are below 60%"
+- "Primary completion rates correlate strongly with handwashing facility availability (R=0.73)"
 
 Please provide insights in this exact JSON format:
 [
   {
-    "id": "unique_id",
-    "type": "trend|comparison|outlier|summary|recommendation",
-    "title": "Brief insight title",
-    "description": "Detailed explanation of the insight",
-    "value": "key metric or percentage if applicable",
+    "id": "cross_analysis_1",
+    "type": "comparison|trend|outlier|summary|recommendation",
+    "title": "Cross-metric insight title",
+    "description": "Detailed explanation showing relationships between 2+ visualizations with specific data points",
+    "value": "key correlation coefficient, percentage difference, or comparative metric",
     "confidence": "high|medium|low",
-    "recommendation": "Specific actionable recommendation",
+    "recommendation": "Specific actionable recommendation based on the cross-analysis",
     "priority": "high|medium|low"
   }
 ]
 
-Focus on:
-1. Key trends and patterns
-2. Performance outliers (both positive and negative)
-3. Comparative analysis between different metrics
-4. Actionable recommendations for improvement
-5. Data quality or completeness issues if any
+MANDATORY REQUIREMENTS:
+- Each insight MUST reference data from at least 2 different visualizations
+- Include specific numbers, percentages, and comparisons
+- Identify cause-effect relationships where possible
+- Highlight unexpected correlations or patterns
+- Provide actionable recommendations based on cross-metric analysis
+- Use terms like "compared to", "correlation with", "in relation to", "while X shows Y"
 
-Ensure insights are:
-- Specific and actionable
-- Based on the actual data provided
-- Relevant to dashboard users
-- Include concrete numbers where possible`;
+Focus on finding hidden patterns that only become visible when analyzing multiple charts together!`;
 
     return prompt;
   }
@@ -210,6 +225,91 @@ Ensure insights are:
     }
     
     return `${summary}${data.length > 5 ? ` ... and ${data.length - 5} more items` : ''}`;
+  }
+
+  /**
+   * Get detailed data structure for comprehensive analysis
+   */
+  private getDetailedDataStructure(data: any[]): string {
+    if (!data || data.length === 0) return "No detailed data available";
+    
+    // Take a larger sample for cross-analysis
+    const sample = data.slice(0, 10);
+    const fieldAnalysis: { [key: string]: any } = {};
+    
+    // Analyze all fields across the sample
+    sample.forEach(item => {
+      Object.keys(item).forEach(key => {
+        if (!fieldAnalysis[key]) {
+          fieldAnalysis[key] = {
+            type: typeof item[key],
+            values: new Set(),
+            isNumeric: typeof item[key] === 'number',
+            hasGender: false,
+            hasLocation: false,
+            hasPeriod: false
+          };
+        }
+        
+        fieldAnalysis[key].values.add(item[key]);
+        
+        // Check for gender-related fields
+        if (typeof item[key] === 'string') {
+          const value = item[key].toLowerCase();
+          if (value.includes('male') || value.includes('female') || value.includes('boys') || value.includes('girls')) {
+            fieldAnalysis[key].hasGender = true;
+          }
+          
+          // Check for location fields
+          if (value.includes('district') || value.includes('region') || value.includes('zone') || key.toLowerCase().includes('orgunit')) {
+            fieldAnalysis[key].hasLocation = true;
+          }
+          
+          // Check for period/time fields
+          if (value.match(/\d{4}/) || value.includes('quarter') || value.includes('month') || key.toLowerCase().includes('period')) {
+            fieldAnalysis[key].hasPeriod = true;
+          }
+        }
+      });
+    });
+    
+    // Create structured summary
+    let structure = "Key Data Fields: ";
+    const importantFields = Object.entries(fieldAnalysis)
+      .filter(([_, analysis]) => analysis.hasGender || analysis.hasLocation || analysis.hasPeriod || analysis.isNumeric)
+      .map(([field, analysis]) => {
+        const tags = [];
+        if (analysis.hasGender) tags.push("GENDER");
+        if (analysis.hasLocation) tags.push("LOCATION");  
+        if (analysis.hasPeriod) tags.push("TIME");
+        if (analysis.isNumeric) tags.push("NUMERIC");
+        
+        const uniqueValues = Math.min(analysis.values.size, 5);
+        return `${field}[${tags.join(',')}]: ${uniqueValues} unique values`;
+      })
+      .join(', ');
+    
+    structure += importantFields || "Standard data fields";
+    
+    // Add sample records for pattern recognition
+    if (sample.length > 0) {
+      structure += `. Sample records: `;
+      structure += sample.slice(0, 3).map(record => {
+        const keyFields = Object.entries(record)
+          .filter(([key, value]) => 
+            key.toLowerCase().includes('male') || 
+            key.toLowerCase().includes('female') ||
+            key.toLowerCase().includes('district') ||
+            key.toLowerCase().includes('region') ||
+            typeof value === 'number'
+          )
+          .map(([key, value]) => `${key}:${value}`)
+          .join(',');
+        return `{${keyFields}}`;
+      }).join(' | ');
+    }
+    
+    return structure;
   }
 
   /**
