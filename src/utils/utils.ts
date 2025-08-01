@@ -582,6 +582,7 @@ export const chartTypes: Option[] = [
   { value: "single", label: "Single Value" },
   { value: "map", label: "Map" },
   { value: "bar", label: "Bar" },
+  { value: "bullet", label: "Bullet Chart" },
   { value: "pie", label: "Pie" },
   { value: "line", label: "Line" },
   { value: "sunburst", label: "Sunburst" },

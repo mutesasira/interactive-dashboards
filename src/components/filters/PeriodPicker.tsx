@@ -26,6 +26,19 @@ const PeriodPicker = () => {
     const hasHidden = hiddenPeriods.length > 0;
     const hiddenTooltip = hiddenPeriods.map(p => p.label).join(", ");
 
+    // Get button label based on selected periods
+    const getButtonLabel = () => {
+        if (selectedPeriods.length === 0) {
+            return "Select Period";
+        } else if (selectedPeriods.length === 1) {
+            return selectedPeriods[0].label;
+        } else if (selectedPeriods.length <= 3) {
+            return selectedPeriods.map(p => p.label).join(", ");
+        } else {
+            return `${selectedPeriods.slice(0, 2).map(p => p.label).join(", ")} +${selectedPeriods.length - 2}`;
+        }
+    };
+
     const getModalPosition = () => {
         if (buttonRef.current) {
             const buttonRect = buttonRef.current.getBoundingClientRect();
@@ -56,60 +69,28 @@ const PeriodPicker = () => {
 
     return (
         <Stack position="relative" flex={1} spacing={1}>
-            <Flex align="center">
-                <Button
-                    ref={buttonRef}
-                    onClick={onToggle}
-                    w="200px"
-                    size="md"
-                    variant="outline"
-                    colorScheme="blue"
-                    _hover={{ bg: "none" }}
-                >
-                    <Text>Period</Text>
-                </Button>
-
-                <Flex
-                    ml={2}
-                    wrap="nowrap"
+            <Button
+                ref={buttonRef}
+                onClick={onToggle}
+                minW="200px"
+                maxW="400px"
+                size="md"
+                variant="outline"
+                colorScheme={selectedPeriods.length > 0 ? "green" : "blue"}
+                _hover={{ bg: "none" }}
+                justifyContent="center"
+                textAlign="center"
+            >
+                <Text 
+                    fontSize="sm"
+                    whiteSpace="nowrap"
                     overflow="hidden"
-                    align="center"
-                    flex="1"
-                    minW={0}
+                    textOverflow="ellipsis"
+                    w="100%"
                 >
-                    {visiblePeriods.map((period, idx) => (
-                        <Tooltip key={idx} label={period.label} hasArrow>
-                            <Badge
-                                colorScheme="green"
-                                variant="subtle"
-                                px={2}
-                                py={1}
-                                mr={2}
-                                maxW="120px"
-                                whiteSpace="nowrap"
-                                overflow="hidden"
-                                textOverflow="ellipsis"
-                            >
-                                {period.label}
-                            </Badge>
-                        </Tooltip>
-                    ))}
-
-                    {hasHidden && (
-                        <Tooltip label={hiddenTooltip} hasArrow>
-                            <Badge
-                                colorScheme="gray"
-                                variant="outline"
-                                px={2}
-                                py={1}
-                                title={hiddenTooltip}
-                            >
-                                +{hiddenPeriods.length} more
-                            </Badge>
-                        </Tooltip>
-                    )}
-                </Flex>
-            </Flex>
+                    {getButtonLabel()}
+                </Text>
+            </Button>
 
             {isOpen && (
                 <Box

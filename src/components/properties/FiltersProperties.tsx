@@ -34,6 +34,9 @@ export default function FiltersProperties({
                     <Stack spacing={[1, 5]} direction={["column", "row"]}>
                         <Checkbox value="periods">Periods</Checkbox>
                         <Checkbox value="organisations">Organisations</Checkbox>
+                        <Checkbox value="cascading-organisations">
+                            Cascading Organisations
+                        </Checkbox>
                         <Checkbox value="organisations-levels">
                             Organisations Levels
                         </Checkbox>

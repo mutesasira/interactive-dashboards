@@ -14,6 +14,7 @@ import OrganisationUnitLevels from "../OrganisationUnitLevels";
 import OUTree from "../OUTree";
 import LoadingIndicator from "../LoadingIndicator";
 import OrgUnitPicker2 from "../filters/OrgUnitPicker2";
+import CascadingOrgUnitPicker from "../filters/CascadingOrgUnitPicker";
 
 const Categories = ({
   id,
@@ -90,28 +91,35 @@ export default function Filters({
               {items?.map((i: string) => {
                 if (i === "organisations") {
                   return (
-                    <>
+                    <div key={i}>
                       <Text>Organisations</Text>
                       <OUTree
                         value={store.organisations}
                         onChange={(value) => storeApi.setOrganisations(value)}
                       />
-                    </>
+                    </div>
+                  );
+                }
+                if (i === "cascading-organisations") {
+                  return (
+                    <div key={i}>
+                      <CascadingOrgUnitPicker />
+                    </div>
                   );
                 }
                 if (i === "periods") {
                   return (
-                    <>
+                    <div key={i}>
                       <Text>Period</Text>
                       <PeriodSelector
                         selectedPeriods={store.periods}
                         onChange={onChangePeriods}
                       />
-                    </>
+                    </div>
                   );
                 }
                 if (i === "organisations-levels") {
-                  return <OrganisationUnitLevels />;
+                  return <OrganisationUnitLevels key={i} />;
                 }
 
                 if (i === "category-combo" && cc) {
@@ -136,6 +144,9 @@ export default function Filters({
       {items?.flatMap((i: string) => {
         if (i === "organisations") {
           return <OrgUnitPicker key={i} />;
+        }
+        if (i === "cascading-organisations") {
+          return <CascadingOrgUnitPicker key={i} />;
         }
         if (i === "periods") {
           return <PeriodPicker key={i} />;

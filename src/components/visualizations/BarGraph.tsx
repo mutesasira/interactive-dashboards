@@ -505,13 +505,45 @@ const BarGraph = ({
           case 'direct':
             if (!thirdAxisDataField) return 0;
             
-            const directPoint = dataPoints[0];
-            if (directPoint[thirdAxisDataField] !== undefined) {
-              const value = directPoint[thirdAxisDataField];
-              const numValue = typeof value === 'number' ? value : Number(value);
-              console.log(`Direct field value for ${category}:`, value);
-              return isNaN(numValue) ? 0 : numValue;
+            console.log(`Looking for direct field '${thirdAxisDataField}' in data points:`, dataPoints);
+            
+            // Try multiple approaches to find the value
+            for (const point of dataPoints) {
+              console.log(`Checking point:`, point);
+              
+              // 1. Direct field access
+              if (point[thirdAxisDataField] !== undefined) {
+                const value = point[thirdAxisDataField];
+                const numValue = typeof value === 'number' ? value : Number(value);
+                console.log(`Direct field value for ${category}:`, value, '-> parsed:', numValue);
+                return isNaN(numValue) ? 0 : numValue;
+              }
+              
+              // 2. Check if it's a series-based field (might need to match series)
+              const seriesValue = point[visualization.properties?.["series"]] || point.series;
+              if (seriesValue === thirdAxisDataField && point.value !== undefined) {
+                const value = point.value;
+                const numValue = typeof value === 'number' ? value : Number(value);
+                console.log(`Series-based value for ${category}:`, value, '-> parsed:', numValue);
+                return isNaN(numValue) ? 0 : numValue;
+              }
+              
+              // 3. Check if the field is in the indicator list and this point has that indicator
+              if (visualization.indicators.includes(thirdAxisDataField)) {
+                // Check various indicator formats
+                const indicatorValue = point[`${thirdAxisDataField}_value`] || 
+                                     point[`${thirdAxisDataField}.value`] ||
+                                     (seriesValue === thirdAxisDataField ? point.value : undefined);
+                
+                if (indicatorValue !== undefined) {
+                  const numValue = typeof indicatorValue === 'number' ? indicatorValue : Number(indicatorValue);
+                  console.log(`Indicator-based value for ${category}:`, indicatorValue, '-> parsed:', numValue);
+                  return isNaN(numValue) ? 0 : numValue;
+                }
+              }
             }
+            
+            console.log(`No direct field value found for ${category} with field ${thirdAxisDataField}`);
             break;
             
           case 'dimension':
@@ -915,32 +947,32 @@ const BarGraph = ({
 
   // Calculate responsive chart style based on sizing properties
   const chartStyle = {
-    width: "100%",
-    height: "100%",
-    minWidth: minChartWidth,
-    minHeight: minChartHeight,
+    width: fitContainer ? "100%" : (chartWidth || "400px"),
+    height: fitContainer ? "100%" : (chartHeight || "300px"),
+    minWidth: fitContainer ? minChartWidth : undefined,
+    minHeight: fitContainer ? minChartHeight : undefined,
     overflow: "hidden",
     display: "block",
-    maxWidth: '100%',
+    maxWidth: fitContainer ? '100%' : 'none',
   };
 
   return (
     <Stack 
-      h="100%" 
+      h={fitContainer ? "100%" : "auto"} 
       spacing={0} 
-      w="100%" 
+      w={fitContainer ? "100%" : "auto"} 
       overflow="hidden"
-      alignItems="stretch"
-      justifyContent="stretch"
+      alignItems={fitContainer ? "stretch" : "flex-start"}
+      justifyContent={fitContainer ? "stretch" : "flex-start"}
     >
       {showTitle && title && (
         <VisualizationTitle section={section} title={title} />
       )}
       <Stack 
-        flex={1} 
-        w="100%" 
-        h="100%"
-        minH={minChartHeight}
+        flex={fitContainer ? 1 : "none"} 
+        w={fitContainer ? "100%" : chartWidth || "400px"} 
+        h={fitContainer ? "100%" : chartHeight || "300px"}
+        minH={fitContainer ? minChartHeight : undefined}
         overflow="hidden"
         alignItems="stretch"
         justifyContent="stretch"

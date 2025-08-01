@@ -70,6 +70,8 @@ const SingleValue = ({
   const fontWeight = dataProperties?.["data.format.fontWeight"] || 400;
   const fontSize = convertFontSize(dataProperties?.["data.format.fontSize"], "32px", 10); // Base: 10px for value (1.8 → 18px)
   const alignment = dataProperties?.["data.alignment"] || "column";
+  const position = dataProperties?.["data.position"] || "center";
+  const verticalPosition = dataProperties?.["data.verticalPosition"] || "center";
   const justifyContent = dataProperties?.["data.justifyContent"] || "center";
   const bg = layoutProperties?.["layout.bg"] || "";
   const radius = dataProperties?.["data.targetradius"] || 60;
@@ -152,6 +154,13 @@ const SingleValue = ({
   // const iconSize = dataProperties?.["data.icon.size"] ?? "24px";
   // const iconColor = dataProperties?.["data.icon.color"] ?? color;
   // const iconPosition = dataProperties?.["data.icon.position"] ?? "left";
+
+  // Value margin properties
+  const valueMarginTop = dataProperties?.["data.value.marginTop"] ?? 0;
+  const valueMarginBottom = dataProperties?.["data.value.marginBottom"] ?? 0;
+  const valueMarginLeft = dataProperties?.["data.value.marginLeft"] ?? 0;
+  const valueMarginRight = dataProperties?.["data.value.marginRight"] ?? 0;
+  const valueMargin = dataProperties?.["data.value.margin"] ?? "";
 
   // Image properties
   const showImage = dataProperties?.["data.image.show"] ?? false;
@@ -239,19 +248,32 @@ const SingleValue = ({
     return style;
   };
 
-  const getValueStyle = () => ({
-    fontSize: fontSize,
-    color: color,
-    fontWeight: fontWeight,
-    textShadow: valueTextShadow,
-    fontFamily: valueFontFamily,
-    letterSpacing: valueLetterSpacing,
-    lineHeight: valueLineHeight,
-    minHeight: "auto",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  });
+  const getValueStyle = () => {
+    // Build margin style - use custom margin if provided, otherwise use individual margins
+    const marginStyle = valueMargin ? {
+      margin: valueMargin
+    } : {
+      marginTop: `${valueMarginTop}px`,
+      marginBottom: `${valueMarginBottom}px`,
+      marginLeft: `${valueMarginLeft}px`,
+      marginRight: `${valueMarginRight}px`,
+    };
+
+    return {
+      fontSize: fontSize,
+      color: color,
+      fontWeight: fontWeight,
+      textShadow: valueTextShadow,
+      fontFamily: valueFontFamily,
+      letterSpacing: valueLetterSpacing,
+      lineHeight: valueLineHeight,
+      minHeight: "auto",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      ...marginStyle,
+    };
+  };
 
   const getTitleStyle = () => ({
     textTransform: titleCase,
@@ -407,7 +429,7 @@ const SingleValue = ({
       <Stack 
         direction={alignment} 
         alignItems={isMarqueeMode ? "center" : alignItems}
-        justifyContent={isMarqueeMode ? "center" : justifyContent}
+        justifyContent={isMarqueeMode ? "center" : getJustifyContentValue()}
         spacing={`${spacing}px`}
         w="100%"
         h="100%"
@@ -417,6 +439,42 @@ const SingleValue = ({
         {content}
       </Stack>
     );
+  };
+
+  // Helper function to get the appropriate justify-content value
+  // Prioritizes the justifyContent property, falls back to position-based logic
+  const getJustifyContentValue = () => {
+    // If horizontal position is explicitly set (not default), use position-based logic
+    const hasExplicitPosition = dataProperties?.["data.position"] && dataProperties["data.position"] !== "center";
+    
+    if (!hasExplicitPosition && justifyContent) {
+      // Use the justifyContent property (includes space-between, space-around, etc.)
+      return justifyContent;
+    }
+    
+    // Otherwise, use position-based logic
+    switch (position) {
+      case "left":
+        return "flex-start";
+      case "right":
+        return "flex-end";
+      case "center":
+      default:
+        return "center";
+    }
+  };
+
+  // Helper function to convert vertical position to align-items value
+  const getAlignItemsFromVerticalPosition = (pos: string) => {
+    switch (pos) {
+      case "top":
+        return "flex-start";
+      case "bottom":
+        return "flex-end";
+      case "center":
+      default:
+        return "center";
+    }
   };
 
   // Animation keyframes (will be injected as CSS)
@@ -463,8 +521,8 @@ const SingleValue = ({
       <style>{animationStyles}</style>
       
       <Stack
-        alignItems={isMarqueeMode ? "center" : (showImage && imagePosition !== "background" ? "stretch" : "center")}
-        justifyContent={isMarqueeMode ? "center" : (showImage && imagePosition !== "background" ? "stretch" : "center")}
+        alignItems={isMarqueeMode ? "center" : (showImage && imagePosition !== "background" ? "stretch" : getAlignItemsFromVerticalPosition(verticalPosition))}
+        justifyContent={isMarqueeMode ? "center" : (showImage && imagePosition !== "background" ? "stretch" : getJustifyContentValue())}
         direction={showImage && imagePosition !== "background" ? getLayoutForImagePosition().direction : "column"}
         w="100%"
         h="100%"
@@ -489,7 +547,7 @@ const SingleValue = ({
         {showImage && imagePosition === "left" && <ImageComponent />}
         
         {/* Main content */}
-        <Box w="100%" h="100%" flex="1" display="flex" alignItems="center" justifyContent="center">
+        <Box w="100%" h="100%" flex="1" display="flex" alignItems={getAlignItemsFromVerticalPosition(verticalPosition)} justifyContent={getJustifyContentValue()}>
           {renderMainContent()}
         </Box>
         

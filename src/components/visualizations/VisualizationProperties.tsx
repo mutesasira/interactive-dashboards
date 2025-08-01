@@ -1,5 +1,6 @@
 import { IVisualization } from "../../interfaces";
 import BarGraphProperties from "../properties/BarGraphProperties";
+import BulletChartProperties from "../properties/BulletChartProperties";
 import CategoryListProperties from "../properties/CategoryListProperties";
 import ClockProperties from "../properties/ClockProperties";
 import DHIS2VisualizationProperties from "../properties/DHIS2VisualizationProperties";
@@ -36,6 +37,7 @@ const VisualizationProperties = ({ visualization }: VizProps) => {
     const allTypes: any = {
       single: <SingleValueProperties visualization={visualization} />,
       bar: <BarGraphProperties visualization={visualization} />,
+      bullet: <BulletChartProperties visualization={visualization} />,
       line: <LineGraphProperties visualization={visualization} />,
       pie: <PieChartProperties visualization={visualization} />,
       map: <MapChartProperties visualization={visualization} />,

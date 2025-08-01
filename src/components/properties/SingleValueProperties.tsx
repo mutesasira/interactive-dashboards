@@ -171,6 +171,26 @@ const SingleValueProperties = ({
                 attribute="data.alignItems"
                 options={alignItemsOptions}
             />
+            <SelectProperty
+                visualization={visualization}
+                title="Horizontal Position"
+                attribute="data.position"
+                options={[
+                    { label: "Left", value: "left" },
+                    { label: "Center", value: "center" },
+                    { label: "Right", value: "right" }
+                ]}
+            />
+            <SelectProperty
+                visualization={visualization}
+                title="Vertical Position"
+                attribute="data.verticalPosition"
+                options={[
+                    { label: "Top", value: "top" },
+                    { label: "Center", value: "center" },
+                    { label: "Bottom", value: "bottom" }
+                ]}
+            />
             <TextProperty
                 visualization={visualization}
                 title="Prefix"
@@ -223,7 +243,7 @@ const SingleValueProperties = ({
             <NumberProperty
                 visualization={visualization}
                 max={60}
-                min={8}
+                min={0}
                 step={1}
                 attribute="data.format.fontSize"
                 title="Value Font Size (px)"
@@ -469,7 +489,7 @@ const SingleValueProperties = ({
 
             {/* Enhanced Styling Properties */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Container Styling</Text>
-            
+
             <TextProperty
                 visualization={visualization}
                 title="Container Padding"
@@ -514,7 +534,7 @@ const SingleValueProperties = ({
 
             {/* Shadow Properties */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Shadow Effects</Text>
-            
+
             <SwitchProperty
                 visualization={visualization}
                 title="Enable Shadow"
@@ -565,7 +585,7 @@ const SingleValueProperties = ({
 
             {/* Gradient Properties */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Gradient Background</Text>
-            
+
             <SwitchProperty
                 visualization={visualization}
                 title="Enable Gradient"
@@ -601,7 +621,7 @@ const SingleValueProperties = ({
 
             {/* Animation Properties */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Animation Effects</Text>
-            
+
             <SwitchProperty
                 visualization={visualization}
                 title="Enable Animation"
@@ -629,7 +649,7 @@ const SingleValueProperties = ({
 
             {/* Advanced Value Styling */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Value Text Styling</Text>
-            
+
             <TextProperty
                 visualization={visualization}
                 title="Value Text Shadow"
@@ -669,9 +689,55 @@ const SingleValueProperties = ({
                 title="Value Line Height"
             />
 
+            {/* Value Margin Properties */}
+            <Text fontWeight="bold" fontSize="sm" color="gray.600" mt={2}>Value Margins</Text>
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.value.marginTop"
+                title="Value Top Margin (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.value.marginBottom"
+                title="Value Bottom Margin (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.value.marginLeft"
+                title="Value Left Margin (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.value.marginRight"
+                title="Value Right Margin (px)"
+            />
+
+            <TextProperty
+                visualization={visualization}
+                title="Value Margin (All Sides)"
+                attribute="data.value.margin"
+                placeholder="e.g., 10px, 5px 10px, 2px 4px 6px 8px"
+            />
+
             {/* Advanced Title Styling */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Title Text Styling</Text>
-            
+
             <TextProperty
                 visualization={visualization}
                 title="Title Text Shadow"
@@ -713,7 +779,7 @@ const SingleValueProperties = ({
 
             {/* Image Properties */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Image Display</Text>
-            
+
             <SwitchProperty
                 visualization={visualization}
                 title="Show Image"

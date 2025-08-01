@@ -22,6 +22,7 @@ import LoadingIndicator from "../LoadingIndicator";
 import AreaGraph from "./AreaGraph";
 import BarGraph from "./BarGraph";
 import BoxPlot from "./BoxPlot";
+import BulletChart from "./BulletChart";
 import BubbleMaps from "./BubbleMaps";
 import CategoryList from "./CategoryList";
 import ClockVisualisation from "./ClockVisualisation";
@@ -243,6 +244,16 @@ export const getVisualization = (
         ),
         boxplot: (
             <BoxPlot
+                section={section}
+                data={data}
+                visualization={visualization}
+                {...otherProperties}
+                layoutProperties={layoutProperties}
+                dataProperties={dataProperties}
+            />
+        ),
+        bullet: (
+            <BulletChart
                 section={section}
                 data={data}
                 visualization={visualization}
