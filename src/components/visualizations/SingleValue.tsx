@@ -65,6 +65,9 @@ const SingleValue = ({
   const titleFontWeight = dataProperties?.["data.title.fontWeight"] || 300;
   const titleCase = dataProperties?.["data.title.case"] || "";
   const titleColor = dataProperties?.["data.title.color"] || "black";
+  const titlePosition = dataProperties?.["data.title.position"] || "center";
+  const centerTitle = layoutProperties?.["layout.centerTitle"] || false;
+  const titleMargin = layoutProperties?.["layout.titleMargin"] || 0;
   const alignItems = dataProperties?.["data.alignItems"] || "center";
   const singleValueBorder = dataProperties?.["data.border"] || 0;
   const fontWeight = dataProperties?.["data.format.fontWeight"] || 400;
@@ -285,10 +288,8 @@ const SingleValue = ({
     fontFamily: titleFontFamily,
     letterSpacing: titleLetterSpacing,
     lineHeight: titleLineHeight,
-    minHeight: "auto",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    textAlign: centerTitle ? "center" : titlePosition,
+    margin: `${titleMargin}px`,
   });
 
   // Image component helper
@@ -345,9 +346,21 @@ const SingleValue = ({
     const content = (
       <>
         {visualization.name && (
-          <Text sx={getTitleStyle()}>
-            {visualization.name}
-          </Text>
+          <Box 
+            w="100%" 
+            display="flex" 
+            justifyContent={
+              centerTitle ? "center" : 
+              titlePosition === "left" ? "flex-start" :
+              titlePosition === "right" ? "flex-end" :
+              "center"
+            }
+            alignItems="center"
+          >
+            <Text sx={getTitleStyle()}>
+              {visualization.name}
+            </Text>
+          </Box>
         )}
         <Stack direction={direction} spacing={`${targetSpacing}px`}>
           {/* primary target graph */}

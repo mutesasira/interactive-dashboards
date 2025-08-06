@@ -777,6 +777,17 @@ const SingleValueProperties = ({
                 title="Title Line Height"
             />
 
+            <SelectProperty
+                visualization={visualization}
+                title="Title Position"
+                attribute="data.title.position"
+                options={[
+                    { label: "Left", value: "left" },
+                    { label: "Center", value: "center" },
+                    { label: "Right", value: "right" }
+                ]}
+            />
+
             {/* Image Properties */}
             <Text fontWeight="bold" fontSize="md" color="blue.600" mt={4}>Image Display</Text>
 

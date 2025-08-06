@@ -14,10 +14,16 @@ export default function CascadingOrgUnitPicker() {
     const engine = useDataEngine();
     const [firstLevelOptions, setFirstLevelOptions] = useState<CascadingOption[]>([]);
     const [secondLevelOptions, setSecondLevelOptions] = useState<CascadingOption[]>([]);
+    const [thirdLevelOptions, setThirdLevelOptions] = useState<CascadingOption[]>([]);
+    const [fourthLevelOptions, setFourthLevelOptions] = useState<CascadingOption[]>([]);
     const [selectedFirstLevel, setSelectedFirstLevel] = useState<CascadingOption | null>(null);
     const [selectedSecondLevel, setSelectedSecondLevel] = useState<CascadingOption | null>(null);
+    const [selectedThirdLevel, setSelectedThirdLevel] = useState<CascadingOption | null>(null);
+    const [selectedFourthLevel, setSelectedFourthLevel] = useState<CascadingOption | null>(null);
     const [loadingFirst, setLoadingFirst] = useState(false);
     const [loadingSecond, setLoadingSecond] = useState(false);
+    const [loadingThird, setLoadingThird] = useState(false);
+    const [loadingFourth, setLoadingFourth] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Manual load function for first level data
@@ -94,10 +100,90 @@ export default function CascadingOrgUnitPicker() {
         }
     };
 
+    // Load third level data
+    const loadThirdLevelData = async (parentId: string) => {
+        setLoadingThird(true);
+        setError(null);
+
+        try {
+            const response: any = await engine.query({
+                children: {
+                    resource: "organisationUnits.json",
+                    params: {
+                        filter: `id:in:[${parentId}]`,
+                        fields: "children[id,name]",
+                        paging: "false",
+                    },
+                },
+            });
+
+            const parentUnits = response.children.organisationUnits || [];
+            const children = parentUnits.flatMap((unit: any) => unit.children || []);
+            const options = children
+                .map((child: any) => ({
+                    label: child.name,
+                    value: child.id,
+                    id: child.id
+                }))
+                .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
+
+            setThirdLevelOptions(options);
+            console.log("Loaded third level options:", options.length);
+        } catch (err) {
+            console.error("Error loading third level data:", err);
+            setError("Failed to load third level organizations");
+            setThirdLevelOptions([]);
+        } finally {
+            setLoadingThird(false);
+        }
+    };
+
+    // Load fourth level data
+    const loadFourthLevelData = async (parentId: string) => {
+        setLoadingFourth(true);
+        setError(null);
+
+        try {
+            const response: any = await engine.query({
+                children: {
+                    resource: "organisationUnits.json",
+                    params: {
+                        filter: `id:in:[${parentId}]`,
+                        fields: "children[id,name]",
+                        paging: "false",
+                    },
+                },
+            });
+
+            const parentUnits = response.children.organisationUnits || [];
+            const children = parentUnits.flatMap((unit: any) => unit.children || []);
+            const options = children
+                .map((child: any) => ({
+                    label: child.name,
+                    value: child.id,
+                    id: child.id
+                }))
+                .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
+
+            setFourthLevelOptions(options);
+            console.log("Loaded fourth level options:", options.length);
+        } catch (err) {
+            console.error("Error loading fourth level data:", err);
+            setError("Failed to load fourth level organizations");
+            setFourthLevelOptions([]);
+        } finally {
+            setLoadingFourth(false);
+        }
+    };
+
     const handleFirstLevelChange = (option: CascadingOption | null) => {
         setSelectedFirstLevel(option);
         setSelectedSecondLevel(null);
+        setSelectedThirdLevel(null);
+        setSelectedFourthLevel(null);
         setSecondLevelOptions([]);
+        setThirdLevelOptions([]);
+        setFourthLevelOptions([]);
         setError(null);
 
         if (option) {
@@ -126,8 +212,15 @@ export default function CascadingOrgUnitPicker() {
 
     const handleSecondLevelChange = (option: CascadingOption | null) => {
         setSelectedSecondLevel(option);
+        setSelectedThirdLevel(null);
+        setSelectedFourthLevel(null);
+        setThirdLevelOptions([]);
+        setFourthLevelOptions([]);
 
         if (option) {
+            // Load children for selected option
+            loadThirdLevelData(option.value);
+
             // Update filter with second level selection
             try {
                 if (storeApi?.setOrganisations) {
@@ -141,6 +234,59 @@ export default function CascadingOrgUnitPicker() {
             try {
                 if (storeApi?.setOrganisations) {
                     storeApi.setOrganisations([selectedFirstLevel.value]);
+                }
+            } catch (err) {
+                console.error("Error updating filter:", err);
+            }
+        }
+    };
+
+    const handleThirdLevelChange = (option: CascadingOption | null) => {
+        setSelectedThirdLevel(option);
+        setSelectedFourthLevel(null);
+        setFourthLevelOptions([]);
+
+        if (option) {
+            // Load children for selected option
+            loadFourthLevelData(option.value);
+
+            // Update filter with third level selection
+            try {
+                if (storeApi?.setOrganisations) {
+                    storeApi.setOrganisations([option.value]);
+                }
+            } catch (err) {
+                console.error("Error updating filter:", err);
+            }
+        } else if (selectedSecondLevel) {
+            // Fall back to second level
+            try {
+                if (storeApi?.setOrganisations) {
+                    storeApi.setOrganisations([selectedSecondLevel.value]);
+                }
+            } catch (err) {
+                console.error("Error updating filter:", err);
+            }
+        }
+    };
+
+    const handleFourthLevelChange = (option: CascadingOption | null) => {
+        setSelectedFourthLevel(option);
+
+        if (option) {
+            // Update filter with fourth level selection
+            try {
+                if (storeApi?.setOrganisations) {
+                    storeApi.setOrganisations([option.value]);
+                }
+            } catch (err) {
+                console.error("Error updating filter:", err);
+            }
+        } else if (selectedThirdLevel) {
+            // Fall back to third level
+            try {
+                if (storeApi?.setOrganisations) {
+                    storeApi.setOrganisations([selectedThirdLevel.value]);
                 }
             } catch (err) {
                 console.error("Error updating filter:", err);
@@ -283,17 +429,123 @@ export default function CascadingOrgUnitPicker() {
                             </Text>
                         )}
                     </Box>
+
+                    {/* Third Level Dropdown */}
+                    <Box flex="1" minW="200px" position="relative">
+                        <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                            Wards ({thirdLevelOptions.length} available)
+                        </Text>
+                        {loadingThird ? (
+                            <Box display="flex" alignItems="center" justifyContent="center" h="40px">
+                                <Spinner size="sm" />
+                                <Text ml={2} fontSize="sm">Loading wards...</Text>
+                            </Box>
+                        ) : (
+                            <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                value={selectedThirdLevel}
+                                onChange={handleThirdLevelChange}
+                                options={thirdLevelOptions}
+                                placeholder={selectedSecondLevel ? "Select Ward..." : "Select LGA first"}
+                                isClearable
+                                size="sm"
+                                isDisabled={!selectedSecondLevel}
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                                menuPlacement="auto"
+                                styles={{
+                                    menuPortal: (base) => ({
+                                        ...base,
+                                        zIndex: 99999
+                                    }),
+                                    menu: (base) => ({
+                                        ...base,
+                                        minWidth: "200px",
+                                        maxHeight: "200px",
+                                        overflow: "auto"
+                                    }),
+                                    menuList: (base) => ({
+                                        ...base,
+                                        maxHeight: "200px"
+                                    }),
+                                    control: (base) => ({
+                                        ...base,
+                                        minHeight: "32px"
+                                    })
+                                }}
+                            />
+                        )}
+                        {!loadingThird && selectedSecondLevel && thirdLevelOptions.length === 0 && (
+                            <Text fontSize="xs" color="gray.500" mt={1}>
+                                No ward organizations available
+                            </Text>
+                        )}
+                    </Box>
+
+                    {/* Fourth Level Dropdown */}
+                    <Box flex="1" minW="200px" position="relative">
+                        <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                            Facilities ({fourthLevelOptions.length} available)
+                        </Text>
+                        {loadingFourth ? (
+                            <Box display="flex" alignItems="center" justifyContent="center" h="40px">
+                                <Spinner size="sm" />
+                                <Text ml={2} fontSize="sm">Loading facilities...</Text>
+                            </Box>
+                        ) : (
+                            <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                value={selectedFourthLevel}
+                                onChange={handleFourthLevelChange}
+                                options={fourthLevelOptions}
+                                placeholder={selectedThirdLevel ? "Select Facility..." : "Select Ward first"}
+                                isClearable
+                                size="sm"
+                                isDisabled={!selectedThirdLevel}
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                                menuPlacement="auto"
+                                styles={{
+                                    menuPortal: (base) => ({
+                                        ...base,
+                                        zIndex: 99999
+                                    }),
+                                    menu: (base) => ({
+                                        ...base,
+                                        minWidth: "200px",
+                                        maxHeight: "200px",
+                                        overflow: "auto"
+                                    }),
+                                    menuList: (base) => ({
+                                        ...base,
+                                        maxHeight: "200px"
+                                    }),
+                                    control: (base) => ({
+                                        ...base,
+                                        minHeight: "32px"
+                                    })
+                                }}
+                            />
+                        )}
+                        {!loadingFourth && selectedThirdLevel && fourthLevelOptions.length === 0 && (
+                            <Text fontSize="xs" color="gray.500" mt={1}>
+                                No facility organizations available
+                            </Text>
+                        )}
+                    </Box>
                 </Stack>
             )}
 
             {/* Current Selection Display */}
-            {(selectedFirstLevel || selectedSecondLevel) && (
+            {(selectedFirstLevel || selectedSecondLevel || selectedThirdLevel || selectedFourthLevel) && (
                 <Box mt={2}>
                     <Text fontSize="xs" fontWeight="medium" color="gray.500">
                         Current Filter:
                     </Text>
                     <Badge colorScheme="blue" fontSize="xs" mt={1}>
-                        {selectedSecondLevel
+                        {selectedFourthLevel
+                            ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel?.label} → ${selectedFourthLevel.label}`
+                            : selectedThirdLevel
+                            ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel.label}`
+                            : selectedSecondLevel
                             ? `${selectedFirstLevel?.label} → ${selectedSecondLevel.label}`
                             : selectedFirstLevel?.label || "None"
                         }

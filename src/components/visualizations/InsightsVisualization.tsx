@@ -49,6 +49,8 @@ const InsightsVisualization = ({
     const backgroundColor = layoutProperties?.["layout.backgroundColor"] || "#ffffff";
     const textColor = dataProperties?.["data.textColor"] || "#000000";
     const fontSize = dataProperties?.["data.fontSize"] || 14;
+    const centerTitle = layoutProperties?.["layout.centerTitle"] || false;
+    const titleMargin = layoutProperties?.["layout.titleMargin"] || 0;
     const autoGenerate = dataProperties?.["data.autoGenerate"] || false;
     const maxInsights = dataProperties?.["data.maxInsights"] || 10;
     const includeDataValues = dataProperties?.["data.includeDataValues"] !== false;
@@ -1830,45 +1832,96 @@ const InsightsVisualization = ({
             overflow="auto"
         >
             <VStack spacing={4} align="stretch">
-                <HStack justify="space-between" align="center">
-                    <HStack align="center">
-                        <Heading size="lg" color={textColor}>
+                {centerTitle ? (
+                    <VStack spacing={2} align="center">
+                        <Heading 
+                            size="lg" 
+                            color={textColor}
+                            margin={`${titleMargin}px`}
+                            textAlign="center"
+                        >
                             {title}
                         </Heading>
-                        {isAutoRegenerating && (
-                            <Badge colorScheme="blue" fontSize="xs" ml={2}>
-                                Updating...
-                            </Badge>
-                        )}
-                        {useAI && aiInsightsService.isAvailable() && (
-                            <Badge colorScheme="purple" fontSize="xs" ml={2}>
-                                AI-Powered
-                            </Badge>
-                        )}
+                        <HStack>
+                            {isAutoRegenerating && (
+                                <Badge colorScheme="blue" fontSize="xs">
+                                    Updating...
+                                </Badge>
+                            )}
+                            {useAI && aiInsightsService.isAvailable() && (
+                                <Badge colorScheme="purple" fontSize="xs">
+                                    AI-Powered
+                                </Badge>
+                            )}
+                        </HStack>
+                        <HStack>
+                            <Tooltip label="Generate New Insights">
+                                <IconButton
+                                    aria-label="Generate insights"
+                                    icon={<RepeatIcon />}
+                                    onClick={handleGenerateInsights}
+                                    isLoading={isGenerating}
+                                    size="sm"
+                                    colorScheme="blue"
+                                />
+                            </Tooltip>
+                            <Tooltip label="Download as PDF">
+                                <IconButton
+                                    aria-label="Download PDF"
+                                    icon={<DownloadIcon />}
+                                    onClick={handleDownloadPDF}
+                                    size="sm"
+                                    colorScheme="green"
+                                    isDisabled={insights.length === 0}
+                                />
+                            </Tooltip>
+                        </HStack>
+                    </VStack>
+                ) : (
+                    <HStack justify="space-between" align="center">
+                        <HStack align="center">
+                            <Heading 
+                                size="lg" 
+                                color={textColor}
+                                margin={`${titleMargin}px`}
+                            >
+                                {title}
+                            </Heading>
+                            {isAutoRegenerating && (
+                                <Badge colorScheme="blue" fontSize="xs" ml={2}>
+                                    Updating...
+                                </Badge>
+                            )}
+                            {useAI && aiInsightsService.isAvailable() && (
+                                <Badge colorScheme="purple" fontSize="xs" ml={2}>
+                                    AI-Powered
+                                </Badge>
+                            )}
+                        </HStack>
+                        <HStack>
+                            <Tooltip label="Generate New Insights">
+                                <IconButton
+                                    aria-label="Generate insights"
+                                    icon={<RepeatIcon />}
+                                    onClick={handleGenerateInsights}
+                                    isLoading={isGenerating}
+                                    size="sm"
+                                    colorScheme="blue"
+                                />
+                            </Tooltip>
+                            <Tooltip label="Download as PDF">
+                                <IconButton
+                                    aria-label="Download PDF"
+                                    icon={<DownloadIcon />}
+                                    onClick={handleDownloadPDF}
+                                    size="sm"
+                                    colorScheme="green"
+                                    isDisabled={insights.length === 0}
+                                />
+                            </Tooltip>
+                        </HStack>
                     </HStack>
-                    <HStack>
-                        <Tooltip label="Generate New Insights">
-                            <IconButton
-                                aria-label="Generate insights"
-                                icon={<RepeatIcon />}
-                                onClick={handleGenerateInsights}
-                                isLoading={isGenerating}
-                                size="sm"
-                                colorScheme="blue"
-                            />
-                        </Tooltip>
-                        <Tooltip label="Download as PDF">
-                            <IconButton
-                                aria-label="Download PDF"
-                                icon={<DownloadIcon />}
-                                onClick={handleDownloadPDF}
-                                size="sm"
-                                colorScheme="green"
-                                isDisabled={insights.length === 0}
-                            />
-                        </Tooltip>
-                    </HStack>
-                </HStack>
+                )}
 
                 <Divider />
 
