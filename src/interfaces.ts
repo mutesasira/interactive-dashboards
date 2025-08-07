@@ -595,3 +595,49 @@ export interface CategoryOption {
     endDate?: string;
     startDate?: string;
 }
+
+export interface IPublicDashboard extends INamed {
+    dashboardId: string;
+    slug: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    allowedVisualizationIds?: string[];
+    customDomain?: string;
+    expiresAt?: string;
+}
+
+export interface IPublicVisualization extends INamed {
+    visualizationId: string;
+    dashboardId?: string;
+    slug: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    customDomain?: string;
+    expiresAt?: string;
+}
+
+export interface IPublicSettings {
+    enabled: boolean;
+    baseDomain: string;
+    serviceAccountUsername: string;
+    serviceAccountPassword: string;
+    allowedOrigins: string[];
+    defaultExpiration?: number; // days
+}
+
+export interface IPublicDashboardRequest {
+    slug: string;
+    dashboardId?: string;
+    visualizationIds?: string[];
+}
+
+export interface IPublicDashboardResponse {
+    dashboard: Partial<IDashboard>;
+    visualizations: Partial<IVisualization>[];
+    data: { [key: string]: any };
+    metadata: { [key: string]: any };
+    isPublic: boolean;
+    expiresAt?: string;
+}

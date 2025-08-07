@@ -44,6 +44,9 @@ import Presentations from "./lists/Presentations";
 import Reports from "./lists/Reports";
 import LoadingIndicator from "./LoadingIndicator";
 import Settings from "./Settings";
+import PublicDashboardSettings from "./settings/PublicDashboardSettings";
+import WorkingPublicDashboards from "./settings/WorkingPublicDashboards";
+import PublicDashboardView from "./public/PublicDashboardView";
 
 const history = createHashHistory();
 const location = new ReactLocation<LocationGenerics>({
@@ -195,6 +198,24 @@ const App = () => {
                     ],
                 },
                 {
+                    path: "/public-settings",
+                    children: [
+                        {
+                            path: "/",
+                            element: <PublicDashboardSettings />,
+                        },
+                    ],
+                },
+                {
+                    path: "/public-dashboards",
+                    children: [
+                        {
+                            path: "/",
+                            element: <WorkingPublicDashboards />,
+                        },
+                    ],
+                },
+                {
                     path: "/dashboards",
                     children: [
                         {
@@ -241,6 +262,10 @@ const App = () => {
                     element: <DashboardForm />,
                 },
             ],
+        },
+        {
+            path: "/public/:slug",
+            element: <PublicDashboardView />,
         },
         {
             element: <Home />,
