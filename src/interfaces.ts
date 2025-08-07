@@ -175,7 +175,21 @@ export interface ISection extends BoxProps {
     marqueePauseOnHover?: boolean;
     marqueeGap?: number;
     marqueeLoop?: boolean;
+    tabGroups?: ITabGroup[];
+    useTabGroups?: boolean;
 }
+
+export interface ITabGroup {
+    id: string;
+    name: string;
+    visualizationIds: string[];
+    order: number;
+    gridEnabled?: boolean;
+    gridColumns?: number;
+    gridRows?: number;
+    gridSpacing?: number;
+}
+
 export interface IFilter {
     id: string;
     resource: string;

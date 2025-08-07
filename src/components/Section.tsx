@@ -1,4 +1,4 @@
-import { DeleteIcon } from "@chakra-ui/icons";
+import { DeleteIcon, ChevronUpIcon, ChevronDownIcon } from "@chakra-ui/icons";
 import {
     Button,
     Flex,
@@ -688,6 +688,324 @@ const Section = () => {
                                                 </Text>
                                             </Stack>
                                         </>
+                                    )}
+                                </Stack>
+                            )}
+
+                            {/* Tab Grouping Settings */}
+                            {section.display === "tabs" && (
+                                <Stack spacing={4} p={4} bg="green.50" borderRadius="md">
+                                    <Text fontWeight="bold" color="green.600">Tab Group Settings</Text>
+                                    <Text fontSize="sm" color="gray.600">
+                                        Group multiple visualizations into organized tabs
+                                    </Text>
+                                    
+                                    <CheckboxField<ISection>
+                                        attribute="useTabGroups"
+                                        func={sectionApi.changeSectionAttribute}
+                                        title="Enable Tab Groups"
+                                        obj={section}
+                                    />
+                                    
+                                    {section.useTabGroups && (
+                                        <Stack spacing={3}>
+                                            <Stack direction="row" spacing={2} align="center">
+                                                <Text fontSize="sm" fontWeight="medium">Tab Groups</Text>
+                                                <Button
+                                                    size="xs"
+                                                    colorScheme="green"
+                                                    onClick={() => {
+                                                        const newGroup = {
+                                                            id: generateUid(),
+                                                            name: `Tab Group ${(section.tabGroups || []).length + 1}`,
+                                                            visualizationIds: [],
+                                                            order: (section.tabGroups || []).length
+                                                        };
+                                                        sectionApi.changeSectionAttribute({
+                                                            attribute: "tabGroups",
+                                                            value: [...(section.tabGroups || []), newGroup]
+                                                        });
+                                                    }}
+                                                >
+                                                    Add Group
+                                                </Button>
+                                            </Stack>
+                                            
+                                            {(section.tabGroups || []).map((group, groupIndex) => (
+                                                <Stack key={group.id} p={3} bg="white" borderRadius="md" border="1px" borderColor="green.200">
+                                                    <Stack direction="row" align="center" spacing={2}>
+                                                        <Input
+                                                            size="sm"
+                                                            value={group.name}
+                                                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                                                const updatedGroups = [...(section.tabGroups || [])];
+                                                                updatedGroups[groupIndex] = { ...group, name: e.target.value };
+                                                                sectionApi.changeSectionAttribute({
+                                                                    attribute: "tabGroups",
+                                                                    value: updatedGroups
+                                                                });
+                                                            }}
+                                                            placeholder="Tab Group Name"
+                                                        />
+                                                        <Stack direction="row" spacing={1}>
+                                                            <IconButton
+                                                                size="sm"
+                                                                aria-label="Move up"
+                                                                icon={<ChevronUpIcon />}
+                                                                variant="ghost"
+                                                                isDisabled={groupIndex === 0}
+                                                                onClick={() => {
+                                                                    const updatedGroups = [...(section.tabGroups || [])];
+                                                                    [updatedGroups[groupIndex], updatedGroups[groupIndex - 1]] = 
+                                                                    [updatedGroups[groupIndex - 1], updatedGroups[groupIndex]];
+                                                                    // Update order numbers
+                                                                    updatedGroups.forEach((g, i) => g.order = i);
+                                                                    sectionApi.changeSectionAttribute({
+                                                                        attribute: "tabGroups",
+                                                                        value: updatedGroups
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <IconButton
+                                                                size="sm"
+                                                                aria-label="Move down"
+                                                                icon={<ChevronDownIcon />}
+                                                                variant="ghost"
+                                                                isDisabled={groupIndex === (section.tabGroups || []).length - 1}
+                                                                onClick={() => {
+                                                                    const updatedGroups = [...(section.tabGroups || [])];
+                                                                    [updatedGroups[groupIndex], updatedGroups[groupIndex + 1]] = 
+                                                                    [updatedGroups[groupIndex + 1], updatedGroups[groupIndex]];
+                                                                    // Update order numbers
+                                                                    updatedGroups.forEach((g, i) => g.order = i);
+                                                                    sectionApi.changeSectionAttribute({
+                                                                        attribute: "tabGroups",
+                                                                        value: updatedGroups
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <IconButton
+                                                                size="sm"
+                                                                aria-label="Delete group"
+                                                                icon={<DeleteIcon />}
+                                                                colorScheme="red"
+                                                                variant="ghost"
+                                                                onClick={() => {
+                                                                    const updatedGroups = (section.tabGroups || []).filter(g => g.id !== group.id);
+                                                                    // Update order numbers
+                                                                    updatedGroups.forEach((g, i) => g.order = i);
+                                                                    sectionApi.changeSectionAttribute({
+                                                                        attribute: "tabGroups",
+                                                                        value: updatedGroups
+                                                                    });
+                                                                }}
+                                                            />
+                                                        </Stack>
+                                                    </Stack>
+                                                    
+                                                    <Stack>
+                                                        <Text fontSize="xs" color="gray.600">Visualizations in this group:</Text>
+                                                        <Select<IVisualization, true, GroupBase<IVisualization>>
+                                                            isMulti
+                                                            size="sm"
+                                                            placeholder="Select visualizations..."
+                                                            value={section.visualizations.filter(viz => group.visualizationIds.includes(viz.id))}
+                                                            options={section.visualizations}
+                                                            getOptionLabel={(viz) => viz.name}
+                                                            getOptionValue={(viz) => viz.id}
+                                                            onChange={(selectedVizs) => {
+                                                                const updatedGroups = [...(section.tabGroups || [])];
+                                                                updatedGroups[groupIndex] = {
+                                                                    ...group,
+                                                                    visualizationIds: (selectedVizs || []).map(viz => viz.id)
+                                                                };
+                                                                sectionApi.changeSectionAttribute({
+                                                                    attribute: "tabGroups",
+                                                                    value: updatedGroups
+                                                                });
+                                                            }}
+                                                        />
+                                                    </Stack>
+                                                    
+                                                    {/* Grid Configuration */}
+                                                    <Stack spacing={2} p={3} bg="gray.50" borderRadius="md">
+                                                        <Text fontSize="xs" fontWeight="medium" color="gray.700">Grid Layout</Text>
+                                                        <CheckboxField<ITabGroup>
+                                                            obj={group}
+                                                            attribute="gridEnabled"
+                                                            title="Enable Grid Layout"
+                                                            func={(update: { attribute: string; value: any }) => {
+                                                                const updatedGroups = [...(section.tabGroups || [])];
+                                                                updatedGroups[groupIndex] = {
+                                                                    ...group,
+                                                                    [update.attribute]: update.value
+                                                                };
+                                                                sectionApi.changeSectionAttribute({
+                                                                    attribute: "tabGroups",
+                                                                    value: updatedGroups
+                                                                });
+                                                            }}
+                                                        />
+                                                        
+                                                        {group.gridEnabled && (
+                                                            <Stack direction="row" spacing={2}>
+                                                                <Stack flex={1}>
+                                                                    <Text fontSize="xs" color="gray.600">Columns</Text>
+                                                                    <NumberInput
+                                                                        size="sm"
+                                                                        min={1}
+                                                                        max={6}
+                                                                        value={group.gridColumns || 2}
+                                                                        onChange={(valueString, valueNumber) => {
+                                                                            const updatedGroups = [...(section.tabGroups || [])];
+                                                                            updatedGroups[groupIndex] = {
+                                                                                ...group,
+                                                                                gridColumns: valueNumber || 2
+                                                                            };
+                                                                            sectionApi.changeSectionAttribute({
+                                                                                attribute: "tabGroups",
+                                                                                value: updatedGroups
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <NumberInputField />
+                                                                        <NumberInputStepper>
+                                                                            <NumberIncrementStepper />
+                                                                            <NumberDecrementStepper />
+                                                                        </NumberInputStepper>
+                                                                    </NumberInput>
+                                                                </Stack>
+                                                                
+                                                                <Stack flex={1}>
+                                                                    <Text fontSize="xs" color="gray.600">Rows</Text>
+                                                                    <NumberInput
+                                                                        size="sm"
+                                                                        min={1}
+                                                                        max={6}
+                                                                        value={group.gridRows || 2}
+                                                                        onChange={(valueString, valueNumber) => {
+                                                                            const updatedGroups = [...(section.tabGroups || [])];
+                                                                            updatedGroups[groupIndex] = {
+                                                                                ...group,
+                                                                                gridRows: valueNumber || 2
+                                                                            };
+                                                                            sectionApi.changeSectionAttribute({
+                                                                                attribute: "tabGroups",
+                                                                                value: updatedGroups
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <NumberInputField />
+                                                                        <NumberInputStepper>
+                                                                            <NumberIncrementStepper />
+                                                                            <NumberDecrementStepper />
+                                                                        </NumberInputStepper>
+                                                                    </NumberInput>
+                                                                </Stack>
+                                                                
+                                                                <Stack flex={1}>
+                                                                    <Text fontSize="xs" color="gray.600">Spacing</Text>
+                                                                    <NumberInput
+                                                                        size="sm"
+                                                                        min={0}
+                                                                        max={20}
+                                                                        value={group.gridSpacing || 4}
+                                                                        onChange={(valueString, valueNumber) => {
+                                                                            const updatedGroups = [...(section.tabGroups || [])];
+                                                                            updatedGroups[groupIndex] = {
+                                                                                ...group,
+                                                                                gridSpacing: valueNumber || 4
+                                                                            };
+                                                                            sectionApi.changeSectionAttribute({
+                                                                                attribute: "tabGroups",
+                                                                                value: updatedGroups
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <NumberInputField />
+                                                                        <NumberInputStepper>
+                                                                            <NumberIncrementStepper />
+                                                                            <NumberDecrementStepper />
+                                                                        </NumberInputStepper>
+                                                                    </NumberInput>
+                                                                </Stack>
+                                                            </Stack>
+                                                        )}
+                                                        
+                                                        {/* Individual Visualization Grid Spans */}
+                                                        {group.gridEnabled && group.visualizationIds.length > 0 && (
+                                                            <Stack spacing={3} p={3} bg="blue.50" borderRadius="md">
+                                                                <Text fontSize="xs" fontWeight="medium" color="blue.700">Individual Visualization Spans</Text>
+                                                                <Text fontSize="xs" color="gray.600">Configure how many grid cells each visualization occupies</Text>
+                                                                
+                                                                {group.visualizationIds.map((vizId) => {
+                                                                    const visualization = section.visualizations.find(v => v.id === vizId);
+                                                                    if (!visualization) return null;
+                                                                    
+                                                                    return (
+                                                                        <Stack key={vizId} direction="row" spacing={3} align="center" bg="white" p={2} borderRadius="md">
+                                                                            <Text fontSize="xs" flex={1} fontWeight="medium">{visualization.name}</Text>
+                                                                            
+                                                                            <Stack direction="row" spacing={2}>
+                                                                                <Stack>
+                                                                                    <Text fontSize="xs" color="gray.600">Columns</Text>
+                                                                                    <NumberInput
+                                                                                        value={visualization.columns || 1}
+                                                                                        max={group.gridColumns || 2}
+                                                                                        min={1}
+                                                                                        step={1}
+                                                                                        size="sm"
+                                                                                        w="70px"
+                                                                                        onChange={(valueString, valueNumber) =>
+                                                                                            sectionApi.changeVisualizationAttribute({
+                                                                                                attribute: "columns",
+                                                                                                value: valueNumber || 1,
+                                                                                                visualization: visualization.id,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        <NumberInputField />
+                                                                                        <NumberInputStepper>
+                                                                                            <NumberIncrementStepper />
+                                                                                            <NumberDecrementStepper />
+                                                                                        </NumberInputStepper>
+                                                                                    </NumberInput>
+                                                                                </Stack>
+                                                                                
+                                                                                <Stack>
+                                                                                    <Text fontSize="xs" color="gray.600">Rows</Text>
+                                                                                    <NumberInput
+                                                                                        value={visualization.rows || 1}
+                                                                                        max={group.gridRows || 2}
+                                                                                        min={1}
+                                                                                        step={1}
+                                                                                        size="sm"
+                                                                                        w="70px"
+                                                                                        onChange={(valueString, valueNumber) =>
+                                                                                            sectionApi.changeVisualizationAttribute({
+                                                                                                attribute: "rows",
+                                                                                                value: valueNumber || 1,
+                                                                                                visualization: visualization.id,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        <NumberInputField />
+                                                                                        <NumberInputStepper>
+                                                                                            <NumberIncrementStepper />
+                                                                                            <NumberDecrementStepper />
+                                                                                        </NumberInputStepper>
+                                                                                    </NumberInput>
+                                                                                </Stack>
+                                                                            </Stack>
+                                                                        </Stack>
+                                                                    );
+                                                                })}
+                                                            </Stack>
+                                                        )}
+                                                    </Stack>
+                                                </Stack>
+                                            ))}
+                                        </Stack>
                                     )}
                                 </Stack>
                             )}

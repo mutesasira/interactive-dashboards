@@ -32,8 +32,8 @@ const options = {
   // target: "https://emisuganda.org/emis",
   // target: "https://dev.emisuganda.org/emisdev",
   // target: "https://play.dhis2.org/40.3.0",
-  target: "https://emis.dhis2nigeria.org.ng/dhis",
-  // target: "https://sd.emis.ac.sz/emis",
+  // target: "https://emis.dhis2nigeria.org.ng/dhis",
+  target: "https://sd.emis.ac.sz/emis",
 
   onProxyReq,
   onProxyRes,
