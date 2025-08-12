@@ -68,13 +68,13 @@ const PeriodPicker = () => {
     };
 
     return (
-        <Stack position="relative" flex={1} spacing={1}>
+        <Stack position="relative" flex={1} spacing={1} alignItems="center">
             <Button
                 ref={buttonRef}
                 onClick={onToggle}
                 minW="200px"
                 maxW="400px"
-                size="md"
+                size="sm"
                 variant="outline"
                 colorScheme={selectedPeriods.length > 0 ? "green" : "blue"}
                 _hover={{ bg: "none" }}
