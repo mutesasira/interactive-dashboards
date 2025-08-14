@@ -3,7 +3,6 @@ let cors = require("cors");
 const path = require("path");
 
 const { createProxyMiddleware } = require("http-proxy-middleware");
-const publicDashboardRoutes = require("./src/api/publicDashboardRoutes");
 
 let sessionCookie = "";
 const onProxyReq = (proxyReq) => {
@@ -60,16 +59,6 @@ app.use(
 // Parse JSON bodies for API routes
 app.use(express.json());
 
-// Public dashboard API routes (no authentication required for /api/public-dashboard/* routes)
-app.use("/api", publicDashboardRoutes);
-
-// Serve static files for public routes
-app.use("/public", express.static(path.join(__dirname, "build")));
-
-// Handle public dashboard routes - serve the main HTML file
-app.get("/public/*", (_, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
 
 // Default proxy for DHIS2 (all other routes)
 app.use("/", exampleProxy);

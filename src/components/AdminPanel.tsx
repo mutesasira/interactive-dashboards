@@ -53,14 +53,97 @@ export default function AdminPanel() {
 
     const updateDashboard = async (data: any) => {
         setLoading(true);
-        await saveDocument(
-            settings.storage,
-            "i-dashboards",
-            store.systemId,
-            data,
-            engine,
-            search.action || "create"
-        );
+
+        // Test basic server connectivity first
+        try {
+            console.log("🔍 Testing server connectivity...");
+            const testQuery = await engine.query({
+                test: {
+                    resource: "me",
+                }
+            });
+            console.log("✅ Server is responsive:", testQuery);
+        } catch (testError) {
+            console.log("❌ Server connectivity test failed:", testError);
+        }
+
+        // // Test dataStore with a simple test object first
+        // try {
+        //     console.log("🧪 Testing basic dataStore functionality...");
+        //     const testData = { id: "test", name: "test", timestamp: Date.now() };
+        //     await saveDocument(
+        //         settings.storage,
+        //         "test-namespace",
+        //         store.systemId,
+        //         testData,
+        //         engine,
+        //         "create"
+        //     );
+        //     console.log("✅ DataStore test successful - dataStore is working");
+        // } catch (testError) {
+        //     console.log("❌ DataStore test failed:", testError);
+        //     console.log("This confirms dataStore has issues on the server");
+        // }
+
+        try {
+            console.log("💾 Attempting dashboard save...");
+            await saveDocument(
+                settings.storage,
+                "i-dashboards",
+                store.systemId,
+                data,
+                engine,
+                search.action || "create"
+            );
+            console.log("✅ Dashboard save successful!");
+        } catch (error) {
+            console.log("❌ Dashboard save failed:", error);
+            console.log("Error details:", {
+                message: error.message,
+                status: error.status,
+                statusText: error.statusText
+            });
+
+            // Try alternative approaches
+            console.log("🔄 Trying alternative save strategies...");
+
+            // Strategy 1: Try with "update" instead of "create"
+            try {
+                console.log("📝 Attempting save with 'update' action...");
+                await saveDocument(
+                    settings.storage,
+                    "i-dashboards",
+                    store.systemId,
+                    data,
+                    engine,
+                    "update"
+                );
+                console.log("✅ Update save successful!");
+                return; // Exit successfully if update works
+            } catch (updateError) {
+                console.log("❌ Update save also failed:", updateError);
+            }
+
+            // Strategy 2: Try saving to a different namespace temporarily
+            try {
+                console.log("📝 Attempting save to backup namespace...");
+                await saveDocument(
+                    settings.storage,
+                    "i-dashboards-backup",
+                    store.systemId,
+                    data,
+                    engine,
+                    "create"
+                );
+                console.log("✅ Backup namespace save successful!");
+                console.log("⚠️ Dashboard saved to backup namespace. You may need to manually migrate it later.");
+                return; // Exit successfully if backup works
+            } catch (backupError) {
+                console.log("❌ Backup namespace save also failed:", backupError);
+            }
+
+            throw error;
+        }
         try {
             await saveDocument(
                 settings.storage,
@@ -92,20 +175,6 @@ export default function AdminPanel() {
     const onClick = () => {
         sectionApi.setCurrentSection(createSection());
         isOpenApi.onOpen();
-    };
-    const togglePublish = async (data: IDashboard, value: boolean) => {
-        await saveDocument(
-            settings.storage,
-            "i-dashboards",
-            store.systemId,
-            {
-                ...data,
-                published: true,
-            },
-            engine,
-            "update"
-        );
-        dashboardApi.setCurrentDashboard({ ...data, published: value });
     };
     return (
         <Stack
@@ -143,24 +212,6 @@ export default function AdminPanel() {
             <Button colorScheme="blue" onClick={onOpen} size="sm">
                 Save
             </Button>
-            {dashboard.published && (
-                <Button
-                    colorScheme="red"
-                    onClick={() => togglePublish(dashboard, false)}
-                    size="sm"
-                >
-                    Unpublish
-                </Button>
-            )}
-            {!dashboard.published && (
-                <Button
-                    colorScheme="teal"
-                    onClick={() => togglePublish(dashboard, true)}
-                    size="sm"
-                >
-                    Publish
-                </Button>
-            )}
             <Button
                 colorScheme="blue"
                 onClick={() => navigate({ to: "/settings/dashboards" })}
@@ -200,10 +251,11 @@ export default function AdminPanel() {
                 title="Save Dashboard"
                 width="calc(100vw - 500px)"
                 footer={[
-                    <Button colorScheme="red" mr={3} onClick={onClose}>
+                    <Button key="close-btn" colorScheme="red" mr={3} onClick={onClose}>
                         Close
                     </Button>,
                     <Button
+                        key="save-btn"
                         onClick={() => updateDashboard(dashboard)}
                         isLoading={loading}
                     >

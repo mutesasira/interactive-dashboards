@@ -209,13 +209,17 @@ const SingleValue = ({
   }, [target, visualizationData]);
 
   useEffect(() => {
-    if (value) {
-      calculatedApi.add({
-        id: visualization.id,
-        value,
-      });
-    }
-  }, [String(value)]);
+    // Always update the calculated store, even if value is 0 or null
+    // This ensures other computed visualizations have access to this value
+    const numericValue = value == null || isNaN(value) ? 0 : value;
+    
+    calculatedApi.add({
+      id: visualization.id,
+      value: numericValue,
+    });
+    
+    console.log(`SingleValue: Updated calculated store - ${visualization.id} = ${numericValue}`);
+  }, [visualization.id, value]);
   const numberFormatter = Intl.NumberFormat("en-US", format);
 
   // Helper functions for advanced styling

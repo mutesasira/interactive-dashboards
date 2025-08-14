@@ -8,7 +8,6 @@ import {
     MdResetTv,
     MdQueryStats,
     MdReport,
-    MdPublic,
     MdSettings,
 } from "react-icons/md";
 import { HiOutlineDocumentReport } from "react-icons/hi";
@@ -141,22 +140,6 @@ const Menus = () => {
                     color="blue.600"
                 />
                 <Text>Reports</Text>
-            </Stack>
-            <Stack
-                alignItems="center"
-                alignContent="center"
-                direction="row"
-                cursor="pointer"
-                onClick={() => navigate({ to: "/settings/public-dashboards" })}
-                _hover={{
-                    color: "blue.600",
-                    fontWeight: "bold",
-                    transform: "scale(1.1)",
-                }}
-                transition="ease-in-out 0.3s"
-            >
-                <Icon as={MdPublic} w={8} h={8} color="blue.600" />
-                <Text>Make Public</Text>
             </Stack>
         </Stack>
     );

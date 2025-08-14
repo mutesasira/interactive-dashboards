@@ -783,23 +783,53 @@ export const deriveSingleValues = (
   data: { [key: string]: any },
   expression?: string
 ) => {
-  if (expression !== undefined) {
+  if (expression !== undefined && expression.trim() !== "") {
     let finalExpression = expression;
     const all = expression.match(/#{\w+.?\w*}/g);
+    
+    console.log("deriveSingleValues - Expression:", expression);
+    console.log("deriveSingleValues - Available data keys:", Object.keys(data));
+    console.log("deriveSingleValues - Variables found:", all);
+    
     if (all) {
       all.forEach((s) => {
-        const val =
-          data[s.replace("#", "").replace("{", "").replace("}", "")] || 0;
-        finalExpression = finalExpression.replace(s, val);
+        const key = s.replace("#", "").replace("{", "").replace("}", "");
+        let val = data[key];
+        
+        // Handle different data types and structures
+        if (val === undefined || val === null) {
+          val = 0;
+          console.warn(`Variable '${key}' not found in data, using 0 as fallback`);
+        } else if (Array.isArray(val) && val.length > 0) {
+          // If it's an array, try to get the first value
+          val = val[0]?.value !== undefined ? val[0].value : val[0];
+        } else if (typeof val === 'object' && val.value !== undefined) {
+          // If it's an object with a value property
+          val = val.value;
+        }
+        
+        // Ensure we have a numeric value
+        const numericVal = parseFloat(String(val));
+        const finalVal = isNaN(numericVal) ? 0 : numericVal;
+        
+        console.log(`Replacing '${s}' with '${finalVal}' (original: ${val})`);
+        finalExpression = finalExpression.replace(s, String(finalVal));
       });
     }
+    
+    console.log("deriveSingleValues - Final expression:", finalExpression);
+    
     try {
       const evaluation = evaluate(finalExpression);
+      console.log("deriveSingleValues - Evaluation result:", evaluation);
       return [{ value: evaluation }];
     } catch (error) {
-      return [{ value: "" }];
+      console.error("deriveSingleValues - Evaluation error:", error);
+      console.error("deriveSingleValues - Failed expression:", finalExpression);
+      return [{ value: 0 }];
     }
   }
+  return [{ value: 0 }];
 };
 
 export const swatchColors: string[][] = [

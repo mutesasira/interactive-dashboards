@@ -101,6 +101,7 @@ const DashboardMenu = () => {
     const categoryOptions = useStore($categoryOptions);
     const [loading, setLoading] = useState<boolean>(false);
     const [isNotDesktop] = useMediaQuery(["(max-width: 992px)"]);
+    console.log("DashboardMenu", dashboard);
     const updateDashboard = async (data: any) => {
         setLoading(true);
         await saveDocument(
@@ -128,28 +129,6 @@ const DashboardMenu = () => {
         onClose();
     };
 
-    const togglePublish = async (data: IDashboard, value: boolean) => {
-        await saveDocument(
-            storage,
-            "i-dashboards",
-            store.systemId,
-            {
-                ...data,
-                published: true,
-            },
-            engine,
-            "create"
-        );
-        dashboardsApi.setDashboards(
-            dashboards.map((d) => {
-                if (data.id === d.id) {
-                    return { ...d, published: value };
-                }
-                return d;
-            })
-        );
-        dashboardApi.setCurrentDashboard({ ...data, published: value });
-    };
 
     const onChangePeriods = (periods: Period[]) => {
         storeApi.changePeriods(periods);
@@ -197,23 +176,6 @@ const DashboardMenu = () => {
                     <Button type="button" size="sm" onClick={onOpen}>
                         Save
                     </Button>
-                    {dashboard.published && (
-                        <Button
-                            size="sm"
-                            onClick={() => togglePublish(dashboard, false)}
-                        >
-                            Unpublish
-                        </Button>
-                    )}
-
-                    {!dashboard.published && (
-                        <Button
-                            size="sm"
-                            onClick={() => togglePublish(dashboard, true)}
-                        >
-                            Publish
-                        </Button>
-                    )}
                 </>
             )}
             {store.isAdmin && !isNotDesktop && <AutoRefreshPicker />}
@@ -333,7 +295,7 @@ const DashboardMenu = () => {
                                         (d: Option) =>
                                             dashboard.nodeSource &&
                                             d.value ===
-                                                dashboard.nodeSource.search
+                                            dashboard.nodeSource.search
                                     )}
                                     onChange={(e) =>
                                         changeNodeSource(
@@ -352,7 +314,7 @@ const DashboardMenu = () => {
                                         (d: Option) =>
                                             dashboard.nodeSource &&
                                             d.value ===
-                                                dashboard.nodeSource.subSearch
+                                            dashboard.nodeSource.subSearch
                                     )}
                                     onChange={(e) =>
                                         changeNodeSource(
@@ -377,6 +339,7 @@ const DashboardMenu = () => {
                                         },
                                     ]);
                                     storeApi.setVersion(generateUid());
+
                                     await updateDashboard(dashboard);
                                     toast({
                                         title: "Dashboard.",
@@ -407,7 +370,7 @@ const DashboardMenu = () => {
                 isOpen={isOpenSettings}
                 placement="right"
                 onClose={onCloseSettings}
-                // finalFocusRef={btnRef}
+            // finalFocusRef={btnRef}
             >
                 <DrawerOverlay />
                 <DrawerContent>

@@ -1443,7 +1443,7 @@ const getDHIS2Query = (
     }
     return `sqlViews/${
       Object.keys(query.dataDimensions)[0]
-    }/data.json${currentParams}`;
+      }/data.json${currentParams}`;
   }
 
   if (query.type === "API") {
@@ -2102,7 +2102,9 @@ export const saveDocument = async <TData extends INamed>(
       resource: `dataStore/${index}/${document.id}`,
       data: document,
     };
-    return engine.mutate(mutation);
+    console.log("mutation", mutation);
+    const response = await engine.mutate(mutation);
+    return response;
   }
 };
 

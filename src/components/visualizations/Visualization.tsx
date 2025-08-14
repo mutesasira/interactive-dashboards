@@ -2,7 +2,7 @@ import { Text, Stack } from "@chakra-ui/react";
 import { useSearch } from "@tanstack/react-location";
 import { useStore } from "effector-react";
 import { fromPairs } from "lodash";
-import React from "react";
+import React, { useEffect } from "react";
 import {
     ISection,
     IVisualization,
@@ -401,12 +401,28 @@ const Visualization = ({
         globalFilters,
         affected && optionSet ? { [affected]: optionSet } : {}
     );
+    const [derivedValue, setDerivedValue] = React.useState<{
+        value: any;
+    }[] | undefined>([]);
+
+    useEffect(() => {
+        if (visualization.expression) {
+            // Combine both data sources for more reliable computed values
+            const combinedData = { ...calculated, ...data };
+            console.log("Computing values from combined data:", combinedData);
+            console.log("Expression:", visualization.expression);
+            
+            const derived = deriveSingleValues(combinedData, visualization.expression);
+            console.log("Computed result:", derived);
+            setDerivedValue(() => derived);
+        }
+    }, [data, calculated, visualization.expression]);
     return (
         <>
             {visualization.expression &&
                 getVisualization(
                     visualization,
-                    deriveSingleValues(calculated, visualization.expression),
+                    derivedValue,
                     section
                 )}
             {!visualization.expression && (

@@ -275,9 +275,6 @@ export const dashboardApi = createApi($dashboard, {
     changeDefaults: (state) => {
         return { ...state, hasDashboards: true, hasDefaultDashboard: true };
     },
-    toggleDashboard: (state, published: boolean) => {
-        return { ...state, published };
-    },
     setRefreshInterval: (state, refreshInterval: string) => {
         return { ...state, refreshInterval };
     },

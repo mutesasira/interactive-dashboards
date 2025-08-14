@@ -6,7 +6,7 @@
     "private": false,
     "scripts": {
         "build": "d2-app-scripts build",
-        "start": "d2-app-scripts start",
+        "start": "d2-app-scripts start --proxy https://emis.dhis2nigeria.org.ng/dhis",
         "test": "d2-app-scripts test",
         "deploy": "d2-app-scripts deploy",
         "dev": "concurrently --kill-others \"yarn start\" \"node setupProxy.js\""

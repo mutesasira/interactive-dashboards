@@ -850,7 +850,6 @@ export const processGraphs = (
           };
         });
       } else {
-        console.log("Death appeared");
         if (data.length > 0 && isArray(data[0])) {
           allSeries =
             options.indicators?.map((i) => options.dataProperties[i] || i) ||
