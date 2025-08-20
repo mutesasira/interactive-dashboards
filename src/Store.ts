@@ -217,6 +217,7 @@ export const $store = domain.createStore<IStore>({
   organisations: [],
   levels: [],
   groups: [],
+  selectedOrgUnitName: "",
   expandedKeys: [],
   selectedCategory: "",
   selectedDashboard: "",

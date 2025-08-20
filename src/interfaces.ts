@@ -274,6 +274,7 @@ export interface IStore {
     periods: Period[];
     groups: string[];
     levels: string[];
+    selectedOrgUnitName: string;
     expandedKeys: React.Key[];
     selectedKeys: React.Key[];
     selectedCategory: string;

@@ -190,6 +190,9 @@ export const storeApi = createApi($store, {
     setGroups: (state, groups: string[]) => {
         return { ...state, groups };
     },
+    setSelectedOrgUnitName: (state, selectedOrgUnitName: string) => {
+        return { ...state, selectedOrgUnitName };
+    },
     setShowFooter: (state, showFooter: boolean) => {
         return { ...state, showFooter };
     },

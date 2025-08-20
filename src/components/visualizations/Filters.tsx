@@ -17,6 +17,7 @@ import OrgUnitPicker2 from "../filters/OrgUnitPicker2";
 import CascadingOrgUnitPicker from "../filters/CascadingOrgUnitPicker";
 import OrgUnitLevelsPicker from "../filters/OrgUnitLevelsPicker";
 import OrgUnitGroupsPicker from "../filters/OrgUnitGroupsPicker";
+import SelectedOrgUnit from "./SelectedOrgUnit";
 
 const Categories = ({
   id,
@@ -84,62 +85,25 @@ export default function Filters({
   const alignment: "row" | "column" =
     visualization.properties["layout.alignment"] ?? "row";
   const cc: string = dashboard.categoryCombo;
+  
+  // Check if cascading organizations are used
+  const hasCascadingOrgUnits = items?.some(item => 
+    item.startsWith("cascading-organisations")
+  );
+  
   if (grouped)
     return (
       <Stack justifyContent="center">
         <DropdownButton
           component={
             <Stack p="10px" bg="white" boxShadow="2xl" overflow="auto">
-              {items?.map((i: string) => {
-                if (i === "organisations") {
-                  return (
-                    <div key={i}>
-                      <Text>Organisations</Text>
-                      <OUTree
-                        value={store.organisations}
-                        onChange={(value) => storeApi.setOrganisations(value)}
-                      />
-                    </div>
-                  );
-                }
-                if (i === "cascading-organisations") {
-                  return (
-                    <div key={i}>
-                      <CascadingOrgUnitPicker />
-                    </div>
-                  );
-                }
-                if (i === "cascading-organisations-with-levels") {
-                  return (
-                    <div key={i}>
-                      <CascadingOrgUnitPicker showLevels={true} />
-                    </div>
-                  );
-                }
-                if (i === "cascading-organisations-with-groups") {
-                  return (
-                    <div key={i}>
-                      <CascadingOrgUnitPicker showGroups={true} />
-                    </div>
-                  );
-                }
-                if (i === "cascading-organisations-with-all") {
-                  return (
-                    <div key={i}>
-                      <CascadingOrgUnitPicker showLevels={true} showGroups={true} />
-                    </div>
-                  );
-                }
-                if (i === "cascading-organisations-with-groupset") {
-                  const groupSetId = visualization.properties["cascade.groupSet"];
-                  return (
-                    <div key={i}>
-                      <CascadingOrgUnitPicker showGroupSets={true} selectedGroupSet={groupSetId} />
-                    </div>
-                  );
-                }
-                if (i === "periods") {
-                  return (
+              {items?.flatMap((i: string, index: number) => {
+                // Automatically insert selected org unit before periods if cascading is used
+                if (i === "periods" && hasCascadingOrgUnits) {
+                  return [
+                    <div key="selected-orgunit">
+                      <SelectedOrgUnit />
+                    </div>,
                     <div key={i}>
                       <Text>Period</Text>
                       <PeriodSelector
@@ -147,30 +111,95 @@ export default function Filters({
                         onChange={onChangePeriods}
                       />
                     </div>
-                  );
+                  ];
+                }
+                if (i === "organisations") {
+                  return [
+                    <div key={i}>
+                      <Text>Organisations</Text>
+                      <OUTree
+                        value={store.organisations}
+                        onChange={(value) => storeApi.setOrganisations(value)}
+                      />
+                    </div>
+                  ];
+                }
+                if (i === "cascading-organisations") {
+                  return [
+                    <div key={i}>
+                      <CascadingOrgUnitPicker />
+                    </div>
+                  ];
+                }
+                if (i === "cascading-organisations-with-levels") {
+                  return [
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showLevels={true} />
+                    </div>
+                  ];
+                }
+                if (i === "cascading-organisations-with-groups") {
+                  return [
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showGroups={true} />
+                    </div>
+                  ];
+                }
+                if (i === "cascading-organisations-with-all") {
+                  return [
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showLevels={true} showGroups={true} />
+                    </div>
+                  ];
+                }
+                if (i === "cascading-organisations-with-groupset") {
+                  const groupSetId = visualization.properties["cascade.groupSet"];
+                  return [
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showGroupSets={true} selectedGroupSet={groupSetId} />
+                    </div>
+                  ];
+                }
+                if (i === "selected-orgunit") {
+                  return [<SelectedOrgUnit key={i} />];
+                }
+                if (i === "periods") {
+                  // This case is handled in flatMap above for cascading, otherwise handle normally
+                  if (!hasCascadingOrgUnits) {
+                    return [
+                      <div key={i}>
+                        <Text>Period</Text>
+                        <PeriodSelector
+                          selectedPeriods={store.periods}
+                          onChange={onChangePeriods}
+                        />
+                      </div>
+                    ];
+                  }
+                  return [];
                 }
                 if (i === "organisations-levels") {
-                  return <OrganisationUnitLevels key={i} />;
+                  return [<OrganisationUnitLevels key={i} />];
                 }
                 if (i === "organisations-levels-picker") {
-                  return (
+                  return [
                     <div key={i}>
                       <OrgUnitLevelsPicker />
                     </div>
-                  );
+                  ];
                 }
                 if (i === "organisations-groups-picker") {
-                  return (
+                  return [
                     <div key={i}>
                       <OrgUnitGroupsPicker />
                     </div>
-                  );
+                  ];
                 }
 
                 if (i === "category-combo" && cc) {
-                  return <Categories id={cc} key={i} direction="column" />;
+                  return [<Categories id={cc} key={i} direction="column" />];
                 }
-                return null;
+                return [];
               })}
             </Stack>
           }
@@ -186,43 +215,54 @@ export default function Filters({
 
   return (
     <Stack direction={alignment} spacing="20px">
-      {items?.flatMap((i: string) => {
+      {items?.flatMap((i: string, index: number) => {
+        // Automatically insert selected org unit before periods if cascading is used
+        if (i === "periods" && hasCascadingOrgUnits) {
+          return [<SelectedOrgUnit key="selected-orgunit" />, <PeriodPicker key={i} />];
+        }
         if (i === "organisations") {
-          return <OrgUnitPicker key={i} />;
+          return [<OrgUnitPicker key={i} />];
         }
         if (i === "cascading-organisations") {
-          return <CascadingOrgUnitPicker key={i} />;
+          return [<CascadingOrgUnitPicker key={i} />];
         }
         if (i === "cascading-organisations-with-levels") {
-          return <CascadingOrgUnitPicker key={i} showLevels={true} />;
+          return [<CascadingOrgUnitPicker key={i} showLevels={true} />];
         }
         if (i === "cascading-organisations-with-groups") {
-          return <CascadingOrgUnitPicker key={i} showGroups={true} />;
+          return [<CascadingOrgUnitPicker key={i} showGroups={true} />];
         }
         if (i === "cascading-organisations-with-all") {
-          return <CascadingOrgUnitPicker key={i} showLevels={true} showGroups={true} />;
+          return [<CascadingOrgUnitPicker key={i} showLevels={true} showGroups={true} />];
         }
         if (i === "cascading-organisations-with-groupset") {
           const groupSetId = visualization.properties["cascade.groupSet"];
-          return <CascadingOrgUnitPicker key={i} showGroupSets={true} selectedGroupSet={groupSetId} />;
+          return [<CascadingOrgUnitPicker key={i} showGroupSets={true} selectedGroupSet={groupSetId} />];
+        }
+        if (i === "selected-orgunit") {
+          return [<SelectedOrgUnit key={i} />];
         }
         if (i === "periods") {
-          return <PeriodPicker key={i} />;
+          // This case is handled in flatMap above for cascading, otherwise handle normally
+          if (!hasCascadingOrgUnits) {
+            return [<PeriodPicker key={i} />];
+          }
+          return [];
         }
         if (i === "organisations-levels") {
-          return <OrganisationUnitLevels key={i} />;
+          return [<OrganisationUnitLevels key={i} />];
         }
         if (i === "organisations-levels-picker") {
-          return <OrgUnitLevelsPicker key={i} />;
+          return [<OrgUnitLevelsPicker key={i} />];
         }
         if (i === "organisations-groups-picker") {
-          return <OrgUnitGroupsPicker key={i} />;
+          return [<OrgUnitGroupsPicker key={i} />];
         }
 
         if (i === "category-combo" && cc) {
-          return <Categories id={cc} key={i} direction="row" />;
+          return [<Categories id={cc} key={i} direction="row" />];
         }
-        return null;
+        return [];
       })}
     </Stack>
   );
