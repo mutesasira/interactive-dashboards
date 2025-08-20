@@ -15,6 +15,8 @@ import OUTree from "../OUTree";
 import LoadingIndicator from "../LoadingIndicator";
 import OrgUnitPicker2 from "../filters/OrgUnitPicker2";
 import CascadingOrgUnitPicker from "../filters/CascadingOrgUnitPicker";
+import OrgUnitLevelsPicker from "../filters/OrgUnitLevelsPicker";
+import OrgUnitGroupsPicker from "../filters/OrgUnitGroupsPicker";
 
 const Categories = ({
   id,
@@ -107,6 +109,35 @@ export default function Filters({
                     </div>
                   );
                 }
+                if (i === "cascading-organisations-with-levels") {
+                  return (
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showLevels={true} />
+                    </div>
+                  );
+                }
+                if (i === "cascading-organisations-with-groups") {
+                  return (
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showGroups={true} />
+                    </div>
+                  );
+                }
+                if (i === "cascading-organisations-with-all") {
+                  return (
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showLevels={true} showGroups={true} />
+                    </div>
+                  );
+                }
+                if (i === "cascading-organisations-with-groupset") {
+                  const groupSetId = visualization.properties["cascade.groupSet"];
+                  return (
+                    <div key={i}>
+                      <CascadingOrgUnitPicker showGroupSets={true} selectedGroupSet={groupSetId} />
+                    </div>
+                  );
+                }
                 if (i === "periods") {
                   return (
                     <div key={i}>
@@ -120,6 +151,20 @@ export default function Filters({
                 }
                 if (i === "organisations-levels") {
                   return <OrganisationUnitLevels key={i} />;
+                }
+                if (i === "organisations-levels-picker") {
+                  return (
+                    <div key={i}>
+                      <OrgUnitLevelsPicker />
+                    </div>
+                  );
+                }
+                if (i === "organisations-groups-picker") {
+                  return (
+                    <div key={i}>
+                      <OrgUnitGroupsPicker />
+                    </div>
+                  );
                 }
 
                 if (i === "category-combo" && cc) {
@@ -148,11 +193,30 @@ export default function Filters({
         if (i === "cascading-organisations") {
           return <CascadingOrgUnitPicker key={i} />;
         }
+        if (i === "cascading-organisations-with-levels") {
+          return <CascadingOrgUnitPicker key={i} showLevels={true} />;
+        }
+        if (i === "cascading-organisations-with-groups") {
+          return <CascadingOrgUnitPicker key={i} showGroups={true} />;
+        }
+        if (i === "cascading-organisations-with-all") {
+          return <CascadingOrgUnitPicker key={i} showLevels={true} showGroups={true} />;
+        }
+        if (i === "cascading-organisations-with-groupset") {
+          const groupSetId = visualization.properties["cascade.groupSet"];
+          return <CascadingOrgUnitPicker key={i} showGroupSets={true} selectedGroupSet={groupSetId} />;
+        }
         if (i === "periods") {
           return <PeriodPicker key={i} />;
         }
         if (i === "organisations-levels") {
           return <OrganisationUnitLevels key={i} />;
+        }
+        if (i === "organisations-levels-picker") {
+          return <OrgUnitLevelsPicker key={i} />;
+        }
+        if (i === "organisations-groups-picker") {
+          return <OrgUnitGroupsPicker key={i} />;
         }
 
         if (i === "category-combo" && cc) {

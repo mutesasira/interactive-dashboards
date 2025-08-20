@@ -6,16 +6,44 @@ import {
     Stack,
     Text,
 } from "@chakra-ui/react";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useDataEngine } from "@dhis2/app-runtime";
 import { sectionApi } from "../../Events";
-import { IVisualization } from "../../interfaces";
+import { IVisualization, Option } from "../../interfaces";
 import SwitchProperty from "./SwitchProperty";
+import SelectProperty from "./SelectProperty";
 
 export default function FiltersProperties({
     visualization,
 }: {
     visualization: IVisualization;
 }) {
+    const engine = useDataEngine();
+    const [groupSets, setGroupSets] = useState<Option[]>([]);
+
+    // Load organization unit group sets
+    useEffect(() => {
+        const loadGroupSets = async () => {
+            try {
+                const response: any = await engine.query({
+                    groupSets: {
+                        resource: "organisationUnitGroupSets.json",
+                        params: {
+                            fields: "id~rename(value),name~rename(label)",
+                            paging: "false",
+                        },
+                    },
+                });
+                setGroupSets(response.groupSets?.organisationUnitGroupSets || []);
+            } catch (err) {
+                console.error("Error loading group sets:", err);
+            }
+        };
+
+        loadGroupSets();
+    }, []);
+
+    const showGroupSetSelector = visualization.properties["layout.items"]?.includes("cascading-organisations-with-groupset") || false;
     return (
         <Stack>
             <Stack>
@@ -36,6 +64,18 @@ export default function FiltersProperties({
                         <Checkbox value="organisations">Organisations</Checkbox>
                         <Checkbox value="cascading-organisations">
                             Cascading Organisations
+                        </Checkbox>
+                        <Checkbox value="cascading-organisations-with-levels">
+                            Cascading Organisations + Levels
+                        </Checkbox>
+                        <Checkbox value="cascading-organisations-with-groups">
+                            Cascading Organisations + Groups
+                        </Checkbox>
+                        <Checkbox value="cascading-organisations-with-all">
+                            Cascading Organisations + Levels & Groups
+                        </Checkbox>
+                        <Checkbox value="cascading-organisations-with-groupset">
+                            Cascading Organisations + Group Set
                         </Checkbox>
                         <Checkbox value="organisations-levels">
                             Organisations Levels
@@ -74,6 +114,15 @@ export default function FiltersProperties({
                         </Stack>
                     </RadioGroup>
                 </Stack>
+            )}
+
+            {showGroupSetSelector && (
+                <SelectProperty
+                    visualization={visualization}
+                    attribute="cascade.groupSet"
+                    title="Organization Unit Group Set"
+                    options={groupSets}
+                />
             )}
         </Stack>
     );

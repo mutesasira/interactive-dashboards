@@ -425,10 +425,16 @@ export const $globalFilters = combine(
     });
     let filters: { [key: string]: any } = {
       m5D13FqKZwN: periods,
-      GQhi6pRnTKF: [store.levels.sort()[store.levels.length - 1]],
       mclvD0Z9mfT: store.organisations,
       ww1uoD3DsYg: [store.minSublevel],
     };
+    
+    // Add levels filter if levels are selected
+    if (store.levels.length > 0) {
+      filters = { ...filters, GQhi6pRnTKF: store.levels };
+    }
+    
+    // Add groups filter if groups are selected
     if (store.groups.length > 0) {
       filters = { ...filters, of2WvtwqbHR: store.groups };
     }

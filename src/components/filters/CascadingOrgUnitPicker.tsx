@@ -1,8 +1,11 @@
-import React, { useState } from "react";
-import { Stack, Text, Box, Badge, Spinner, Button } from "@chakra-ui/react";
+import React, { useState, useEffect } from "react";
+import { Stack, Text, Box, Badge, Spinner, Button, Checkbox, Flex } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
 import { useDataEngine } from "@dhis2/app-runtime";
-import { storeApi } from "../../Events";
+import { useStore } from "effector-react";
+import { storeApi, datumAPi } from "../../Events";
+import { Option } from "../../interfaces";
+import { $store } from "../../Store";
 import { ChevronDownIcon } from "@chakra-ui/icons";
 
 interface CascadingOption {
@@ -11,8 +14,28 @@ interface CascadingOption {
     id: string;
 }
 
-export default function CascadingOrgUnitPicker() {
+interface CascadingOrgUnitPickerProps {
+    showLevels?: boolean;
+    showGroups?: boolean;
+    showGroupSets?: boolean;
+    selectedGroupSet?: string;
+}
+
+interface GroupFromSet {
+    id: string;
+    name: string;
+}
+
+export default function CascadingOrgUnitPicker({
+    showLevels = false,
+    showGroups = false,
+    showGroupSets = false,
+    selectedGroupSet
+}: CascadingOrgUnitPickerProps = {}) {
     const engine = useDataEngine();
+    const store = useStore($store);
+    
+    // Org unit hierarchy state
     const [firstLevelOptions, setFirstLevelOptions] = useState<CascadingOption[]>([]);
     const [secondLevelOptions, setSecondLevelOptions] = useState<CascadingOption[]>([]);
     const [thirdLevelOptions, setThirdLevelOptions] = useState<CascadingOption[]>([]);
@@ -26,6 +49,237 @@ export default function CascadingOrgUnitPicker() {
     const [loadingThird, setLoadingThird] = useState(false);
     const [loadingFourth, setLoadingFourth] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+
+    // Filter data from DHIS2
+    const [levels, setLevels] = useState<Option[]>([]);
+    const [groups, setGroups] = useState<Option[]>([]);
+    const [groupSets, setGroupSets] = useState<Option[]>([]);
+    const [groupsFromSet, setGroupsFromSet] = useState<GroupFromSet[]>([]);
+    const [loadingLevels, setLoadingLevels] = useState(false);
+    const [loadingGroups, setLoadingGroups] = useState(false);
+    const [loadingGroupSets, setLoadingGroupSets] = useState(false);
+    const [loadingGroupsFromSet, setLoadingGroupsFromSet] = useState(false);
+
+    // Selected filter values
+    const selectedLevels = store.levels || [];
+    const selectedGroups = store.groups || [];
+    
+    // Functions to load metadata from DHIS2
+    const loadLevels = async () => {
+        if (levels.length > 0) return; // Already loaded
+        setLoadingLevels(true);
+        try {
+            const response: any = await engine.query({
+                levels: {
+                    resource: "organisationUnitLevels.json",
+                    params: {
+                        fields: "id,level~rename(value),name~rename(label)",
+                        paging: "false",
+                    },
+                },
+            });
+            setLevels(response.levels?.organisationUnitLevels || []);
+        } catch (err) {
+            console.error("Error loading levels:", err);
+        } finally {
+            setLoadingLevels(false);
+        }
+    };
+
+    const loadGroups = async () => {
+        if (groups.length > 0) return; // Already loaded
+        setLoadingGroups(true);
+        try {
+            const response: any = await engine.query({
+                groups: {
+                    resource: "organisationUnitGroups.json",
+                    params: {
+                        fields: "id~rename(value),name~rename(label)",
+                        paging: "false",
+                    },
+                },
+            });
+            setGroups(response.groups?.organisationUnitGroups || []);
+        } catch (err) {
+            console.error("Error loading groups:", err);
+        } finally {
+            setLoadingGroups(false);
+        }
+    };
+
+    const loadGroupSets = async () => {
+        if (groupSets.length > 0) return; // Already loaded
+        setLoadingGroupSets(true);
+        try {
+            const response: any = await engine.query({
+                groupSets: {
+                    resource: "organisationUnitGroupSets.json",
+                    params: {
+                        fields: "id~rename(value),name~rename(label)",
+                        paging: "false",
+                    },
+                },
+            });
+            setGroupSets(response.groupSets?.organisationUnitGroupSets || []);
+        } catch (err) {
+            console.error("Error loading group sets:", err);
+        } finally {
+            setLoadingGroupSets(false);
+        }
+    };
+    
+    // Function to load groups from a specific group set
+    const loadGroupsFromSet = async (groupSetId: string) => {
+        setLoadingGroupsFromSet(true);
+        try {
+            const response: any = await engine.query({
+                groupSet: {
+                    resource: `organisationUnitGroupSets/${groupSetId}.json`,
+                    params: {
+                        fields: "organisationUnitGroups[id,name]",
+                    },
+                },
+            });
+
+            const groupsData = response.groupSet?.organisationUnitGroups || [];
+            setGroupsFromSet(groupsData);
+        } catch (err) {
+            console.error("Error loading groups from set:", err);
+            setGroupsFromSet([]);
+        } finally {
+            setLoadingGroupsFromSet(false);
+        }
+    };
+
+    // Effects to load data when component mounts or props change
+    useEffect(() => {
+        if (showLevels) {
+            loadLevels();
+        }
+    }, [showLevels]);
+
+    useEffect(() => {
+        if (showGroups && !showGroupSets) {
+            loadGroups();
+        }
+    }, [showGroups, showGroupSets]);
+
+    // Effect to load groups when group set is selected
+    useEffect(() => {
+        if (selectedGroupSet && showGroupSets) {
+            loadGroupsFromSet(selectedGroupSet);
+        }
+    }, [selectedGroupSet, showGroupSets]);
+
+    // Filter handlers
+    const handleLevelsChange = (selectedOptions: readonly Option[] | null) => {
+        const levelIds = selectedOptions?.map((option) => String(option.value)) || [];
+        
+        console.log("Levels change:", { selectedLevels, levelIds });
+        
+        // Clear existing level dimensions first
+        if (selectedLevels.length > 0) {
+            selectedLevels.forEach(levelId => {
+                console.log("Removing level dimension:", levelId);
+                datumAPi.changeDimension({
+                    id: levelId,
+                    type: "filter",
+                    dimension: "ou",
+                    resource: "oul",
+                    prefix: "LEVEL-",
+                    remove: true,
+                });
+            });
+        }
+        
+        // Add new level dimensions
+        levelIds.forEach(levelId => {
+            console.log("Adding level dimension:", levelId);
+            datumAPi.changeDimension({
+                id: levelId,
+                type: "filter",
+                dimension: "ou",
+                resource: "oul",
+                prefix: "LEVEL-",
+            });
+        });
+        
+        // Also update the global store for UI consistency
+        storeApi.changeLevels(levelIds);
+    };
+
+    const handleGroupsChange = (selectedOptions: readonly Option[] | null) => {
+        const groupIds = selectedOptions?.map((option) => String(option.value)) || [];
+        
+        console.log("Groups change:", { selectedGroups, groupIds });
+        
+        // Clear existing group dimensions first
+        if (selectedGroups.length > 0) {
+            selectedGroups.forEach(groupId => {
+                console.log("Removing group dimension:", groupId);
+                datumAPi.changeDimension({
+                    id: groupId,
+                    type: "filter",
+                    dimension: "ou",
+                    resource: "oug",
+                    prefix: "OU_GROUP-",
+                    remove: true,
+                });
+            });
+        }
+        
+        // Add new group dimensions
+        groupIds.forEach(groupId => {
+            console.log("Adding group dimension:", groupId);
+            datumAPi.changeDimension({
+                id: groupId,
+                type: "filter",
+                dimension: "ou",
+                resource: "oug",
+                prefix: "OU_GROUP-",
+            });
+        });
+        
+        // Also update the global store for UI consistency
+        storeApi.setGroups(groupIds);
+    };
+
+    const handleGroupsFromSetChange = (selectedOptions: readonly GroupFromSet[] | null) => {
+        const groupIds = selectedOptions?.map((option) => option.id) || [];
+        
+        console.log("Groups from set change:", { selectedGroups, groupIds, groupsFromSet });
+        
+        // Clear ALL existing group dimensions first - not just from current set
+        if (selectedGroups.length > 0) {
+            selectedGroups.forEach(groupId => {
+                console.log("Removing existing group dimension:", groupId);
+                datumAPi.changeDimension({
+                    id: groupId,
+                    type: "filter",
+                    dimension: "ou", 
+                    resource: "oug",
+                    prefix: "OU_GROUP-",
+                    remove: true,
+                });
+            });
+        }
+        
+        // Add new group dimensions
+        groupIds.forEach(groupId => {
+            console.log("Adding group dimension from set:", groupId);
+            datumAPi.changeDimension({
+                id: groupId,
+                type: "filter",
+                dimension: "ou",
+                resource: "oug", 
+                prefix: "OU_GROUP-",
+            });
+        });
+        
+        // Also update the global store for UI consistency
+        storeApi.setGroups(groupIds);
+    };
 
     // Manual load function for first level data
     const loadFirstLevelData = async () => {
@@ -314,34 +568,142 @@ export default function CascadingOrgUnitPicker() {
                 Organization Units (Cascading)
             </Text> */}
 
-            {/* Load Data Button */}
-            {firstLevelOptions.length === 0 && !loadingFirst && (
-                <Box>
-                    <Button
-                        size="md"
-                        onClick={loadFirstLevelData}
-                        colorScheme="blue"
-                        variant="outline"
-                        rightIcon={<ChevronDownIcon />}
-                    >
-                        States
-                    </Button>
-                </Box>
-            )}
+            {/* Combined Filters and Cascading Row */}
+            {(firstLevelOptions.length === 0 || showLevels || showGroups || showGroupSets || firstLevelOptions.length > 0) && (
+                <Flex direction="row" align="flex-start" gap={3} wrap="wrap">
+                    {/* Load Data Button - Only show when needed */}
+                    {firstLevelOptions.length === 0 && !loadingFirst && (
+                        <Box minW="120px">
+                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                Organization Units
+                            </Text>
+                            <Button
+                                size="sm"
+                                onClick={loadFirstLevelData}
+                                colorScheme="blue"
+                                variant="outline"
+                                rightIcon={<ChevronDownIcon />}
+                                width="100%"
+                            >
+                                States
+                            </Button>
+                        </Box>
+                    )}
 
-            {/* Loading State */}
-            {loadingFirst && (
-                <Box display="flex" alignItems="center" justifyContent="center" h="60px">
-                    <Spinner size="md" />
-                    <Text ml={3} fontSize="sm">Loading States...</Text>
-                </Box>
-            )}
+                    {/* Additional Filter Buttons */}
+                    {showLevels && (
+                        <Box minW="200px">
+                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                Organization Unit Levels
+                            </Text>
+                            {loadingLevels ? (
+                                <Flex align="center" justify="center" h="32px">
+                                    <Spinner size="sm" />
+                                    <Text ml={2} fontSize="xs">Loading...</Text>
+                                </Flex>
+                            ) : (
+                                <Select<Option, true, GroupBase<Option>>
+                                    isMulti
+                                    isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
+                                    value={levels.filter((level) => 
+                                        selectedLevels.indexOf(String(level.value)) !== -1
+                                    )}
+                                    onChange={handleLevelsChange}
+                                    options={levels}
+                                    placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select levels..."}
+                                    size="sm"
+                                    menuPortalTarget={document.body}
+                                    menuPosition="fixed"
+                                    styles={{
+                                        menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                        control: (base) => ({ ...base, minHeight: "32px" })
+                                    }}
+                                />
+                            )}
+                        </Box>
+                    )}
 
-            {/* Dropdowns */}
-            {firstLevelOptions.length > 0 && (
-                <Stack direction="row" spacing={3} align="flex-start" position="relative">
-                    {/* First Level Dropdown */}
-                    <Box flex="1" minW="180px" position="relative">
+                    {showGroups && !showGroupSets && (
+                        <Box minW="200px">
+                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                Organization Unit Groups
+                            </Text>
+                            {loadingGroups ? (
+                                <Flex align="center" justify="center" h="32px">
+                                    <Spinner size="sm" />
+                                    <Text ml={2} fontSize="xs">Loading...</Text>
+                                </Flex>
+                            ) : (
+                                <Select<Option, true, GroupBase<Option>>
+                                    isMulti
+                                    isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
+                                    value={groups.filter((group) => 
+                                        selectedGroups.indexOf(String(group.value)) !== -1
+                                    )}
+                                    onChange={handleGroupsChange}
+                                    options={groups}
+                                    placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select groups..."}
+                                    size="sm"
+                                    menuPortalTarget={document.body}
+                                    menuPosition="fixed"
+                                    styles={{
+                                        menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                        control: (base) => ({ ...base, minHeight: "32px" })
+                                    }}
+                                />
+                            )}
+                        </Box>
+                    )}
+
+                    {showGroupSets && selectedGroupSet && (
+                        <Box minW="200px">
+                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                Groups from Selected Set
+                            </Text>
+                            {loadingGroupsFromSet ? (
+                                <Flex align="center" justify="center" h="32px">
+                                    <Spinner size="sm" />
+                                    <Text ml={2} fontSize="xs">Loading...</Text>
+                                </Flex>
+                            ) : (
+                                <Select<GroupFromSet, true, GroupBase<GroupFromSet>>
+                                    isMulti
+                                    isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
+                                    value={groupsFromSet.filter((group) => 
+                                        selectedGroups.indexOf(group.id) !== -1
+                                    )}
+                                    onChange={handleGroupsFromSetChange}
+                                    options={groupsFromSet}
+                                    getOptionLabel={(option) => option.name}
+                                    getOptionValue={(option) => option.id}
+                                    placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select groups..."}
+                                    size="sm"
+                                    menuPortalTarget={document.body}
+                                    menuPosition="fixed"
+                                    styles={{
+                                        menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                        control: (base) => ({ ...base, minHeight: "32px" }),
+                                        menu: (base) => ({ 
+                                            ...base, 
+                                            position: "fixed",
+                                            minWidth: "200px" 
+                                        }),
+                                        menuList: (base) => ({ 
+                                            ...base, 
+                                            maxHeight: "200px",
+                                            overflow: "auto"
+                                        })
+                                    }}
+                                />
+                            )}
+                        </Box>
+                    )}
+
+                    {/* Cascading Dropdowns - Show inline when loaded */}
+                    {firstLevelOptions.length > 0 && (
+                        <>
+                            {/* First Level Dropdown */}
+                            <Box minW="180px" position="relative">
                         <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                             States ({firstLevelOptions.length} available)
                         </Text>
@@ -379,7 +741,7 @@ export default function CascadingOrgUnitPicker() {
                     </Box>
 
                     {/* Second Level Dropdown */}
-                    <Box flex="1" minW="180px" position="relative">
+                    <Box minW="180px" position="relative">
                         <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                             LGAs ({secondLevelOptions.length} available)
                         </Text>
@@ -430,7 +792,7 @@ export default function CascadingOrgUnitPicker() {
                     </Box>
 
                     {/* Third Level Dropdown */}
-                    <Box flex="1" minW="180px" position="relative">
+                    <Box minW="180px" position="relative">
                         <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                             Wards ({thirdLevelOptions.length} available)
                         </Text>
@@ -481,7 +843,7 @@ export default function CascadingOrgUnitPicker() {
                     </Box>
 
                     {/* Fourth Level Dropdown */}
-                    <Box flex="1" minW="180px" position="relative">
+                    <Box minW="180px" position="relative">
                         <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                             Schools ({fourthLevelOptions.length} available)
                         </Text>
@@ -530,7 +892,17 @@ export default function CascadingOrgUnitPicker() {
                             </Text>
                         )}
                     </Box>
-                </Stack>
+                        </>
+                    )}
+                </Flex>
+            )}
+
+            {/* Loading State */}
+            {loadingFirst && (
+                <Box display="flex" alignItems="center" justifyContent="center" h="60px">
+                    <Spinner size="md" />
+                    <Text ml={3} fontSize="sm">Loading States...</Text>
+                </Box>
             )}
 
             {/* Current Selection Display */}
