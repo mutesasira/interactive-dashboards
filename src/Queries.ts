@@ -31,6 +31,8 @@ import {
   visualizationMetadataApi,
   attributionApi,
   dashboardCategoryComboApi,
+  categoriesApi,
+  dashboardsApi,
 } from "./Events";
 import {
   DataNode,
@@ -325,7 +327,7 @@ export const useInitials = (storage: "data-store" | "es") => {
 
       const actualLevel = min<number>(
         organisationUnits.map(({ level }: any) => level)
-      );
+      ) || 1;
       const isAdmin =
         authorities.indexOf("IDVT_ADMINISTRATION") !== -1 ||
         authorities.indexOf("ALL") !== -1 ||
@@ -338,8 +340,8 @@ export const useInitials = (storage: "data-store" | "es") => {
 
       const levels = organisationUnitLevels.map(({ value }: any) => value);
 
-      const minLevel = min<number>(levels);
-      const maxLevel = max<number>(levels);
+      const minLevel = min<number>(levels) || 1;
+      const maxLevel = max<number>(levels) || 5;
 
       const availableUnits = organisationUnits.map((unit: any) => {
         return {
@@ -353,31 +355,36 @@ export const useInitials = (storage: "data-store" | "es") => {
         };
       });
 
-      const settings = await getIndex<IDashboardSetting>(storage, {
-        namespace: "i-dashboard-settings",
-        systemId,
-        otherQueries: [],
-        signal,
-        engine,
-      });
+      let settings: IDashboardSetting[] = [];
+      try {
+        settings = await getIndex<IDashboardSetting>(storage, {
+          namespace: "i-dashboard-settings",
+          systemId,
+          otherQueries: [],
+          signal,
+          engine,
+        });
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+        settings = [];
+      }
+      
       if (settings.length > 0) {
         storeApi.changeSelectedDashboard(settings[0].defaultDashboard);
         settingsApi.set(settings[0]);
       }
-      if (maxLevel && minLevel && actualLevel) {
-        storeApi.setMaxLevel(maxLevel);
-        if (actualLevel + 1 <= maxLevel) {
-          storeApi.setMinSublevel(actualLevel + 1);
-        } else {
-          storeApi.setMinSublevel(minLevel);
-        }
-
-        storeApi.setLevels([
-          actualLevel === 1
-            ? "3"
-            : `${actualLevel !== maxLevel ? actualLevel + 1 : actualLevel}`,
-        ]);
+      storeApi.setMaxLevel(maxLevel);
+      if (actualLevel + 1 <= maxLevel) {
+        storeApi.setMinSublevel(actualLevel + 1);
+      } else {
+        storeApi.setMinSublevel(minLevel);
       }
+
+      storeApi.setLevels([
+        actualLevel === 1
+          ? "3"
+          : `${actualLevel !== maxLevel ? actualLevel + 1 : actualLevel}`,
+      ]);
 
       storeApi.setSystemId(systemId);
       storeApi.setSystemName(systemName);
@@ -386,13 +393,44 @@ export const useInitials = (storage: "data-store" | "es") => {
       storeApi.setOrganisations(facilities);
       storeApi.changeAdministration(isAdmin);
 
-      await db.systemInfo.bulkPut([
-        { id: "1", systemId, systemName, instanceBaseUrl },
-      ]);
-      await db.organisations.bulkPut(availableUnits);
-      await db.levels.bulkPut(organisationUnitLevels);
-      await db.groups.bulkPut(organisationUnitGroups);
-      await db.dataSets.bulkPut(dataSets);
+      // Load categories and dashboards into global state
+      try {
+        const categories = await getIndex<ICategory>(storage, {
+          namespace: "i-categories",
+          systemId,
+          otherQueries: [],
+          signal,
+          engine,
+        });
+        categoriesApi.setCategories(categories);
+
+        const dashboards = await getIndex<IDashboard>(storage, {
+          namespace: "i-dashboards", 
+          systemId,
+          otherQueries: [],
+          signal,
+          engine,
+        });
+        dashboardsApi.setDashboards(dashboards);
+        storeApi.changeHasDashboards(dashboards.length > 0);
+      } catch (error) {
+        console.error("Failed to load categories and dashboards:", error);
+        categoriesApi.setCategories([]);
+        dashboardsApi.setDashboards([]);
+        storeApi.changeHasDashboards(false);
+      }
+
+      try {
+        await db.systemInfo.bulkPut([
+          { id: "1", systemId, systemName, instanceBaseUrl },
+        ]);
+        await db.organisations.bulkPut(availableUnits);
+        await db.levels.bulkPut(organisationUnitLevels);
+        await db.groups.bulkPut(organisationUnitGroups);
+        await db.dataSets.bulkPut(dataSets);
+      } catch (error) {
+        console.error("Failed to save data to IndexedDB:", error);
+      }
       return "Done";
     },
     { retry: false }

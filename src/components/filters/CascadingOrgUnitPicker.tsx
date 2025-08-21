@@ -66,6 +66,9 @@ export default function CascadingOrgUnitPicker({
     const selectedLevels = store.levels || [];
     const selectedGroups = store.groups || [];
     
+    // System initialization state
+    const [isSystemInitialized, setIsSystemInitialized] = useState(false);
+    
     // Functions to load metadata from DHIS2
     const loadLevels = async () => {
         if (levels.length > 0) return; // Already loaded
@@ -172,6 +175,38 @@ export default function CascadingOrgUnitPicker({
             loadGroupsFromSet(selectedGroupSet);
         }
     }, [selectedGroupSet, showGroupSets]);
+
+    // Effect to monitor system initialization
+    useEffect(() => {
+        const checkInitialization = async () => {
+            if (store.systemId && !isSystemInitialized) {
+                const units = await db.organisations.toArray();
+                if (units && units.length > 0) {
+                    console.log("System initialized: Found", units.length, "organization units");
+                    setIsSystemInitialized(true);
+                }
+            }
+        };
+
+        // Check immediately
+        checkInitialization();
+
+        // Set up a timer to check periodically until initialized
+        const interval = setInterval(checkInitialization, 500);
+
+        // Clear interval when initialized or component unmounts
+        return () => {
+            clearInterval(interval);
+        };
+    }, [store.systemId, isSystemInitialized]);
+
+    // Debug effect to track firstLevelOptions changes
+    useEffect(() => {
+        console.log("firstLevelOptions changed:", firstLevelOptions.length, "items");
+        if (firstLevelOptions.length > 0) {
+            console.log("First few items:", firstLevelOptions.slice(0, 3));
+        }
+    }, [firstLevelOptions]);
 
     // Filter handlers
     const handleLevelsChange = (selectedOptions: readonly Option[] | null) => {
@@ -299,7 +334,20 @@ export default function CascadingOrgUnitPicker({
 
         try {
             // First try to get user's accessible org units from local db
-            const userOrgUnits = await db.organisations.toArray();
+            console.log("Loading organization units from local database...");
+            let userOrgUnits = await db.organisations.toArray();
+            console.log("Found", userOrgUnits?.length || 0, "organization units in local database");
+            
+            // If no data found, wait a bit and try again (in case initial load is still in progress)
+            if ((!userOrgUnits || userOrgUnits.length === 0) && store.systemId) {
+                console.log("No data found, waiting for initialization to complete...");
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const retryUnits = await db.organisations.toArray();
+                console.log("Retry found", retryUnits?.length || 0, "organization units");
+                if (retryUnits && retryUnits.length > 0) {
+                    userOrgUnits = retryUnits;
+                }
+            }
             
             if (userOrgUnits && userOrgUnits.length > 0) {
                 // Analyze user's org unit access levels
@@ -314,28 +362,53 @@ export default function CascadingOrgUnitPicker({
                 };
 
                 // Determine access pattern
+                // If user has level 1 access, assume they can access all levels below
                 const accessLevels = {
                     minLevel,
-                    maxLevel,
-                    hasLevel2: levelCounts.level2 > 0,
-                    hasLevel3: levelCounts.level3 > 0,
-                    hasLevel4: levelCounts.level4 > 0,
-                    hasLevel5: levelCounts.level5 > 0
+                    maxLevel: minLevel === 1 ? 5 : maxLevel, // Level 1 users can access down to level 5
+                    hasLevel2: levelCounts.level2 > 0 || minLevel === 1, // Level 1 users can access level 2
+                    hasLevel3: levelCounts.level3 > 0 || minLevel <= 2, // Level 1-2 users can access level 3
+                    hasLevel4: levelCounts.level4 > 0 || minLevel <= 3, // Level 1-3 users can access level 4
+                    hasLevel5: levelCounts.level5 > 0 || minLevel <= 4  // Level 1-4 users can access level 5
                 };
                 setUserAccessLevels(accessLevels);
 
-                // Check if user has broad access (multiple level 2 units or access starts at level 2)
-                setHasFullAccess(levelCounts.level2 > 3 || (minLevel === 2 && levelCounts.level2 > 1));
+                // Check if user has broad access
+                // Level 1 access = full tree access
+                // Multiple level 2 units = broad regional access  
+                // Single high-level access = limited access
+                const fullAccess = minLevel === 1 || 
+                                 levelCounts.level2 > 3 || 
+                                 (minLevel === 2 && levelCounts.level2 > 1);
+                setHasFullAccess(fullAccess);
+                console.log("User access analysis:", {
+                    levelCounts,
+                    minLevel,
+                    maxLevel,
+                    hasFullAccess: fullAccess,
+                    accessLevels,
+                    willShowLevel2: fullAccess || (accessLevels.minLevel <= 2 && accessLevels.maxLevel >= 3),
+                    willShowLevel3: fullAccess || (accessLevels.minLevel <= 3 && accessLevels.maxLevel >= 4),
+                    willShowLevel4: fullAccess || (accessLevels.minLevel <= 4 && accessLevels.maxLevel >= 5)
+                });
                 
                 // Filter org units to show appropriate level for first dropdown
                 let optionsForFirstLevel = userOrgUnits;
                 
-                // If user starts at level 3 or higher, use those as first level options
-                if (minLevel > 2) {
-                    optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === minLevel);
-                } else {
-                    // User has level 2 access, use level 2 units
+                // Use the user's minimum access level as the starting point
+                console.log("Filtering for level:", minLevel, "from", userOrgUnits.length, "total units");
+                if (minLevel === 1) {
+                    // User has level 1 access (country/root level), use level 1 units
+                    optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === 1);
+                    console.log("Level 1 filter result:", optionsForFirstLevel.length, "units");
+                } else if (minLevel === 2) {
+                    // User has level 2 access, use level 2 units  
                     optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === 2);
+                    console.log("Level 2 filter result:", optionsForFirstLevel.length, "units");
+                } else {
+                    // User starts at level 3 or higher, use those as first level options
+                    optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === minLevel);
+                    console.log("Level", minLevel, "filter result:", optionsForFirstLevel.length, "units");
                 }
 
                 const options = optionsForFirstLevel
@@ -347,9 +420,12 @@ export default function CascadingOrgUnitPicker({
                     }))
                     .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
 
+                console.log("Setting first level options:", options.length, "items");
+                console.log("First few options:", options.slice(0, 3));
                 setFirstLevelOptions(options);
             } else {
                 // Fallback: load from DHIS2 if local db is empty - assume full access
+                console.log("Local database is empty, loading from DHIS2...");
                 setHasFullAccess(true);
                 setUserAccessLevels({
                     minLevel: 2,
@@ -376,17 +452,22 @@ export default function CascadingOrgUnitPicker({
                     .map((unit: any) => ({
                         label: unit.name,
                         value: unit.id,
-                        id: unit.id
+                        id: unit.id,
+                        level: 2  // Add level for consistency
                     }))
                     .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
 
+                console.log("Fallback: Setting first level options:", options.length, "items");
+                console.log("Fallback: First few options:", options.slice(0, 3));
                 setFirstLevelOptions(options);
+                console.log("Fallback: Loaded", options.length, "level 2 org units, hasFullAccess:", true);
             }
         } catch (err) {
             console.error("Error loading first level data:", err);
             setError("Failed to load organization data");
         } finally {
             setLoadingFirst(false);
+            console.log("loadFirstLevelData completed. Loading state set to false.");
         }
     };
 
@@ -640,6 +721,15 @@ export default function CascadingOrgUnitPicker({
         );
     }
 
+    // Debug render state
+    console.log("Render state:", {
+        firstLevelOptionsLength: firstLevelOptions.length,
+        loadingFirst,
+        isSystemInitialized,
+        hasFullAccess,
+        errorState: error
+    });
+
     return (
         <Stack spacing={2} minW="300px" position="relative" zIndex={1}>
             {/* <Text fontSize="sm" fontWeight="medium" color="gray.600">
@@ -648,10 +738,10 @@ export default function CascadingOrgUnitPicker({
 
             {/* Combined Filters and Cascading Row */}
             {(firstLevelOptions.length === 0 || showLevels || showGroups || showGroupSets || firstLevelOptions.length > 0) && (
-                <Flex direction="row" align="flex-start" gap={3} wrap="wrap">
+                <Flex direction="row" align="flex-start" gap={2} wrap="wrap">
                     {/* Load Data Button - Only show when needed */}
-                    {firstLevelOptions.length === 0 && !loadingFirst && (
-                        <Box minW="120px">
+                    {firstLevelOptions.length === 0 && !loadingFirst && isSystemInitialized && (
+                        <Box minW="100px">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Organization Units
                             </Text>
@@ -668,9 +758,22 @@ export default function CascadingOrgUnitPicker({
                         </Box>
                     )}
 
+                    {/* Show loading message while system is initializing */}
+                    {!isSystemInitialized && store.systemId && (
+                        <Box minW="140px">
+                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                Organization Units
+                            </Text>
+                            <Box display="flex" alignItems="center" justifyContent="center" h="32px" bg="gray.50" borderRadius="md" border="1px solid" borderColor="gray.200">
+                                <Spinner size="sm" />
+                                <Text ml={2} fontSize="xs" color="gray.600">Initializing...</Text>
+                            </Box>
+                        </Box>
+                    )}
+
                     {/* Additional Filter Buttons - Only show for users with full access */}
                     {showLevels && hasFullAccess && (
-                        <Box minW="200px">
+                        <Box minW="150px">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Organization Unit Levels
                             </Text>
@@ -702,7 +805,7 @@ export default function CascadingOrgUnitPicker({
                     )}
 
                     {showGroups && !showGroupSets && hasFullAccess && (
-                        <Box minW="200px">
+                        <Box minW="150px">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Organization Unit Groups
                             </Text>
@@ -734,7 +837,7 @@ export default function CascadingOrgUnitPicker({
                     )}
 
                     {showGroupSets && selectedGroupSet && hasFullAccess && (
-                        <Box minW="200px">
+                        <Box minW="150px">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Groups from Selected Set
                             </Text>
@@ -780,8 +883,9 @@ export default function CascadingOrgUnitPicker({
                     {/* Cascading Dropdowns - Show inline when loaded, respecting user access levels */}
                     {firstLevelOptions.length > 0 && (
                         <>
+                            {console.log("Rendering cascading dropdowns with", firstLevelOptions.length, "options")}
                             {/* First Level Dropdown - Always show if we have options */}
-                            <Box minW="180px" position="relative">
+                            <Box minW="140px" position="relative">
                         <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                             {userAccessLevels.minLevel === 2 ? 'Organization Units' : 
                              userAccessLevels.minLevel === 3 ? 'Sub-units' : 
@@ -804,7 +908,7 @@ export default function CascadingOrgUnitPicker({
                                 }),
                                 menu: (base) => ({
                                     ...base,
-                                    minWidth: "180px",
+                                    minWidth: "140px",
                                     maxHeight: "200px",
                                     overflow: "auto"
                                 }),
@@ -820,9 +924,9 @@ export default function CascadingOrgUnitPicker({
                         />
                     </Box>
 
-                    {/* Second Level Dropdown - Only show if user's access allows next level */}
-                    {userAccessLevels.minLevel <= 2 && userAccessLevels.maxLevel >= 3 && (
-                        <Box minW="180px" position="relative">
+                    {/* Second Level Dropdown - Show for full access users or limited access users with appropriate levels */}
+                    {(hasFullAccess || (userAccessLevels.minLevel <= 2 && userAccessLevels.maxLevel >= 3)) && (
+                        <Box minW="140px" position="relative">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Sub-units ({secondLevelOptions.length} available)
                             </Text>
@@ -850,7 +954,7 @@ export default function CascadingOrgUnitPicker({
                                             }),
                                             menu: (base) => ({
                                                 ...base,
-                                                minWidth: "180px",
+                                                minWidth: "140px",
                                                 maxHeight: "200px",
                                                 overflow: "auto"
                                             }),
@@ -873,9 +977,9 @@ export default function CascadingOrgUnitPicker({
                         </Box>
                     )}
 
-                    {/* Third Level Dropdown - Only show if user's access allows level 4 */}
-                    {userAccessLevels.minLevel <= 3 && userAccessLevels.maxLevel >= 4 && (
-                        <Box minW="180px" position="relative">
+                    {/* Third Level Dropdown - Show for full access users or limited access users with appropriate levels */}
+                    {(hasFullAccess || (userAccessLevels.minLevel <= 3 && userAccessLevels.maxLevel >= 4)) && (
+                        <Box minW="140px" position="relative">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Level 3 ({thirdLevelOptions.length} available)
                             </Text>
@@ -903,7 +1007,7 @@ export default function CascadingOrgUnitPicker({
                                             }),
                                             menu: (base) => ({
                                                 ...base,
-                                                minWidth: "180px",
+                                                minWidth: "140px",
                                                 maxHeight: "200px",
                                                 overflow: "auto"
                                             }),
@@ -926,9 +1030,9 @@ export default function CascadingOrgUnitPicker({
                         </Box>
                     )}
 
-                    {/* Fourth Level Dropdown - Only show if user's access allows level 5 */}
-                    {userAccessLevels.minLevel <= 4 && userAccessLevels.maxLevel >= 5 && (
-                        <Box minW="180px" position="relative">
+                    {/* Fourth Level Dropdown - Show for full access users or limited access users with appropriate levels */}
+                    {(hasFullAccess || (userAccessLevels.minLevel <= 4 && userAccessLevels.maxLevel >= 5)) && (
+                        <Box minW="140px" position="relative">
                             <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                                 Level 4 ({fourthLevelOptions.length} available)
                             </Text>
@@ -956,7 +1060,7 @@ export default function CascadingOrgUnitPicker({
                                             }),
                                             menu: (base) => ({
                                                 ...base,
-                                                minWidth: "180px",
+                                                minWidth: "140px",
                                                 maxHeight: "200px",
                                                 overflow: "auto"
                                             }),
