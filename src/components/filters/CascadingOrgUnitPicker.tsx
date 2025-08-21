@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Stack, Text, Box, Badge, Spinner, Button, Checkbox, Flex } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
 import { useDataEngine } from "@dhis2/app-runtime";
@@ -13,6 +13,7 @@ interface CascadingOption {
     label: string;
     value: string;
     id: string;
+    level: number;
 }
 
 interface CascadingOrgUnitPickerProps {
@@ -35,7 +36,7 @@ export default function CascadingOrgUnitPicker({
 }: CascadingOrgUnitPickerProps = {}) {
     const engine = useDataEngine();
     const store = useStore($store);
-    
+
     // Org unit hierarchy state
     const [firstLevelOptions, setFirstLevelOptions] = useState<CascadingOption[]>([]);
     const [secondLevelOptions, setSecondLevelOptions] = useState<CascadingOption[]>([]);
@@ -50,7 +51,9 @@ export default function CascadingOrgUnitPicker({
     const [loadingThird, setLoadingThird] = useState(false);
     const [loadingFourth, setLoadingFourth] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
+    const [fifthLevelOptions, setFifthLevelOptions] = useState<CascadingOption[]>([]);
+    const [selectedFifthLevel, setSelectedFifthLevel] = useState<CascadingOption | null>(null);
+    const [loadingFifth, setLoadingFifth] = useState(false);
 
     // Filter data from DHIS2
     const [levels, setLevels] = useState<Option[]>([]);
@@ -65,10 +68,19 @@ export default function CascadingOrgUnitPicker({
     // Selected filter values
     const selectedLevels = store.levels || [];
     const selectedGroups = store.groups || [];
-    
+
     // System initialization state
     const [isSystemInitialized, setIsSystemInitialized] = useState(false);
-    
+
+    // Track which levels are locked (auto-selected parents)
+    const [lockedLevels, setLockedLevels] = useState({
+        level1: false,
+        level2: false,
+        level3: false,
+        level4: false,
+        level5: false,
+    });
+
     // Functions to load metadata from DHIS2
     const loadLevels = async () => {
         if (levels.length > 0) return; // Already loaded
@@ -132,7 +144,7 @@ export default function CascadingOrgUnitPicker({
             setLoadingGroupSets(false);
         }
     };
-    
+
     // Function to load groups from a specific group set
     const loadGroupsFromSet = async (groupSetId: string) => {
         setLoadingGroupsFromSet(true);
@@ -208,11 +220,18 @@ export default function CascadingOrgUnitPicker({
         }
     }, [firstLevelOptions]);
 
+    useEffect(() => {
+        if (isSystemInitialized && firstLevelOptions.length === 0 && !loadingFirst) {
+            loadFirstLevelData();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isSystemInitialized,]);
+
     // Filter handlers
     const handleLevelsChange = (selectedOptions: readonly Option[] | null) => {
         const levelIds = selectedOptions?.map((option) => String(option.value)) || [];
-        
-        
+
+
         // Clear existing level dimensions first
         if (selectedLevels.length > 0) {
             selectedLevels.forEach(levelId => {
@@ -226,7 +245,7 @@ export default function CascadingOrgUnitPicker({
                 });
             });
         }
-        
+
         // Add new level dimensions
         levelIds.forEach(levelId => {
             datumAPi.changeDimension({
@@ -237,15 +256,15 @@ export default function CascadingOrgUnitPicker({
                 prefix: "LEVEL-",
             });
         });
-        
+
         // Also update the global store for UI consistency
         storeApi.changeLevels(levelIds);
     };
 
     const handleGroupsChange = (selectedOptions: readonly Option[] | null) => {
         const groupIds = selectedOptions?.map((option) => String(option.value)) || [];
-        
-        
+
+
         // Clear existing group dimensions first
         if (selectedGroups.length > 0) {
             selectedGroups.forEach(groupId => {
@@ -259,7 +278,7 @@ export default function CascadingOrgUnitPicker({
                 });
             });
         }
-        
+
         // Add new group dimensions
         groupIds.forEach(groupId => {
             datumAPi.changeDimension({
@@ -270,40 +289,40 @@ export default function CascadingOrgUnitPicker({
                 prefix: "OU_GROUP-",
             });
         });
-        
+
         // Also update the global store for UI consistency
         storeApi.setGroups(groupIds);
     };
 
     const handleGroupsFromSetChange = (selectedOptions: readonly GroupFromSet[] | null) => {
         const groupIds = selectedOptions?.map((option) => option.id) || [];
-        
-        
+
+
         // Clear ALL existing group dimensions first - not just from current set
         if (selectedGroups.length > 0) {
             selectedGroups.forEach(groupId => {
                 datumAPi.changeDimension({
                     id: groupId,
                     type: "filter",
-                    dimension: "ou", 
+                    dimension: "ou",
                     resource: "oug",
                     prefix: "OU_GROUP-",
                     remove: true,
                 });
             });
         }
-        
+
         // Add new group dimensions
         groupIds.forEach(groupId => {
             datumAPi.changeDimension({
                 id: groupId,
                 type: "filter",
                 dimension: "ou",
-                resource: "oug", 
+                resource: "oug",
                 prefix: "OU_GROUP-",
             });
         });
-        
+
         // Also update the global store for UI consistency
         storeApi.setGroups(groupIds);
     };
@@ -327,8 +346,230 @@ export default function CascadingOrgUnitPicker({
         hasLevel5: false
     });
 
+
+    // Function to load level 2 options for broad access users
+    const loadBroadAccessLevel2Options = async () => {
+        console.log("Loading level 2 options for broad access user");
+        try {
+            const response: any = await engine.query({
+                orgUnits: {
+                    resource: "organisationUnits.json",
+                    params: {
+                        filter: "level:eq:2",
+                        fields: "id,name,level",
+                        paging: "false",
+                    },
+                },
+            });
+
+            const units = response.orgUnits.organisationUnits || [];
+            const options = units
+                .map((unit: any) => ({
+                    label: unit.name,
+                    value: unit.id,
+                    id: unit.id,
+                    level: 2
+                }))
+                .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
+
+            console.log("Loaded", options.length, "level 2 options for broad access");
+            setFirstLevelOptions(options);
+
+        } catch (error) {
+            console.error("Error loading broad access options:", error);
+        }
+    };
+
+    // Function to load full hierarchy and auto-select parents
+    const loadHierarchyAndAutoSelect = async (userOrgUnits: any[], userMinLevel: number) => {
+        console.log("Loading hierarchy for user starting at level", userMinLevel);
+
+        try {
+            // Get the user's unit at their deepest level (the one we want to trace back from)
+            const userUnit = userOrgUnits.find(unit => unit.level === userMinLevel) || userOrgUnits[0];
+            if (!userUnit) return;
+
+            console.log("User's target unit for hierarchy:", userUnit.title, "at level", userUnit.level);
+            console.log("Tracing hierarchy back from this unit to level 1");
+
+            // Load the full path to this unit to get all parents
+            console.log("Querying DHIS2 for org unit path:", userUnit.id);
+            const pathResponse: any = await engine.query({
+                orgUnitPath: {
+                    resource: `organisationUnits/${userUnit.id}.json`,
+                    params: {
+                        fields: "path,ancestors[id,name,level]"
+                    }
+                }
+            });
+
+            console.log("Path response:", pathResponse);
+            const ancestors = pathResponse.orgUnitPath?.ancestors || [];
+            console.log("Found", ancestors.length, "ancestors:", ancestors.map((a: any) => `${a.name} (L${a.level})`));
+
+            // Auto-select and load the hierarchy from level 1 down to user's level
+            if (ancestors.length > 0) {
+                // Start from level 1 (country level)
+                const level1Unit = ancestors.find((a: any) => a.level === 1);
+                if (level1Unit) {
+                    // Load level 1 options
+                    const level1Options = [{
+                        label: level1Unit.name,
+                        value: level1Unit.id,
+                        id: level1Unit.id,
+                        level: 1
+                    }];
+                    setFirstLevelOptions(level1Options);
+                    setSelectedFirstLevel(level1Options[0]);
+
+                    // Set locked levels - all levels above user's min level are locked
+                    const newLockedLevels = {
+                        level1: userMinLevel > 1,
+                        level2: userMinLevel > 2,
+                        level3: userMinLevel > 3,
+                        level4: userMinLevel > 4,
+                        level5: userMinLevel > 5,
+                    };
+                    console.log("=== SETTING LOCKED LEVELS ===");
+                    console.log("userMinLevel:", userMinLevel);
+                    console.log("newLockedLevels:", newLockedLevels);
+                    setLockedLevels(newLockedLevels);
+                    console.log("Locked levels set in state");
+
+                    // Auto-select each level down to the user's accessible level
+                    await autoSelectHierarchyLevel(level1Unit.id, 2, userMinLevel, ancestors, userOrgUnits);
+                }
+            }
+        } catch (error) {
+            console.error("Error loading hierarchy:", error);
+            console.error("Full error details:", error);
+            // Fallback to showing user's units at their level
+            console.log("Using fallback approach - showing user units at level", userMinLevel);
+            const fallbackOptions = userOrgUnits
+                .filter((unit: any) => unit.level === userMinLevel)
+                .map((unit: any) => ({
+                    label: unit.title,
+                    value: unit.id,
+                    id: unit.id,
+                    level: unit.level
+                }));
+            setFirstLevelOptions(fallbackOptions);
+            console.log("Fallback options set:", fallbackOptions.length, "items");
+        }
+    };
+
+    // Recursive function to auto-select hierarchy levels
+    const autoSelectHierarchyLevel = async (parentId: string, targetLevel: number, userMinLevel: number, ancestors: any[], userOrgUnits: any[]) => {
+        if (targetLevel > userMinLevel) return;
+
+        try {
+            // Load children at the target level
+            const response: any = await engine.query({
+                children: {
+                    resource: "organisationUnits.json",
+                    params: {
+                        filter: `id:in:[${parentId}]`,
+                        fields: "children[id,name]",
+                        paging: "false",
+                    },
+                },
+            });
+
+            const parentUnits = response.children.organisationUnits || [];
+            const children = parentUnits.flatMap((unit: any) => unit.children || []);
+
+            if (children.length > 0) {
+                const options = children.map((child: any) => ({
+                    label: child.name,
+                    value: child.id,
+                    id: child.id,
+                    level: targetLevel
+                }));
+
+                // Set options for this level
+                if (targetLevel === 2) {
+                    setSecondLevelOptions(options);
+                    // Auto-select the ancestor at this level if it exists
+                    const ancestor = ancestors.find((a: any) => a.level === targetLevel);
+                    if (ancestor) {
+                        const selectedOption = options.find((opt: any) => opt.id === ancestor.id);
+                        if (selectedOption) {
+                            setSelectedSecondLevel(selectedOption);
+                            // Continue to next level
+                            await autoSelectHierarchyLevel(ancestor.id, targetLevel + 1, userMinLevel, ancestors, userOrgUnits);
+                        }
+                    }
+                } else if (targetLevel === 3) {
+                    setThirdLevelOptions(options);
+                    const ancestor = ancestors.find((a: any) => a.level === targetLevel);
+                    if (ancestor) {
+                        const selectedOption = options.find((opt: any) => opt.id === ancestor.id);
+                        if (selectedOption) {
+                            setSelectedThirdLevel(selectedOption);
+                            await autoSelectHierarchyLevel(ancestor.id, targetLevel + 1, userMinLevel, ancestors, userOrgUnits);
+                        }
+                    }
+                } else if (targetLevel === 4) {
+                    setFourthLevelOptions(options);
+                    const ancestor = ancestors.find((a: any) => a.level === targetLevel);
+                    if (ancestor) {
+                        const selectedOption = options.find((opt: any) => opt.id === ancestor.id);
+                        if (selectedOption) {
+                            setSelectedFourthLevel(selectedOption);
+                            await autoSelectHierarchyLevel(ancestor.id, targetLevel + 1, userMinLevel, ancestors, userOrgUnits);
+                        }
+                    }
+                } else if (targetLevel === 5) {
+                    setFifthLevelOptions(options);
+
+                    const ancestor = ancestors.find((a: any) => a.level === targetLevel);
+                    if (ancestor) {
+                        const selectedOption = options.find((opt: any) => opt.id === ancestor.id);
+                        if (selectedOption) {
+                            setSelectedFifthLevel(selectedOption);
+                            // no deeper level after 5; stop here
+                        }
+                    }
+                }
+
+                // If this is the user's accessible level, show all their units at this level
+                if (targetLevel === userMinLevel) {
+                    const userUnitsAtLevel = userOrgUnits.filter((unit: any) => unit.level === targetLevel);
+                    if (userUnitsAtLevel.length > 1) {
+                        const userOptions = userUnitsAtLevel.map((unit: any) => ({
+                            label: unit.title,
+                            value: unit.id,
+                            id: unit.id,
+                            level: unit.level
+                        }));
+
+                        // Replace the options at this level with all user's accessible units
+                        if (targetLevel === 2) setSecondLevelOptions(userOptions);
+                        else if (targetLevel === 3) setThirdLevelOptions(userOptions);
+                        else if (targetLevel === 4) setFourthLevelOptions(userOptions);
+                        else if (targetLevel === 5) setFifthLevelOptions(userOptions);
+
+                        console.log(`User has access to ${userOptions.length} units at level ${targetLevel}`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error loading level ${targetLevel}:`, error);
+        }
+    };
+
     // Manual load function for first level data - uses user's accessible org units
+    const didAutoLoad = useRef(false);
+
     const loadFirstLevelData = async () => {
+        if (didAutoLoad.current) return;
+        if (loadingFirst) return;
+        if (firstLevelOptions.length > 0) return;
+
+        didAutoLoad.current = true;     // mark immediately to prevent a second call
+        setLoadingFirst(true);
+        setError(null);
+
         setLoadingFirst(true);
         setError(null);
 
@@ -337,7 +578,7 @@ export default function CascadingOrgUnitPicker({
             console.log("Loading organization units from local database...");
             let userOrgUnits = await db.organisations.toArray();
             console.log("Found", userOrgUnits?.length || 0, "organization units in local database");
-            
+
             // If no data found, wait a bit and try again (in case initial load is still in progress)
             if ((!userOrgUnits || userOrgUnits.length === 0) && store.systemId) {
                 console.log("No data found, waiting for initialization to complete...");
@@ -348,7 +589,7 @@ export default function CascadingOrgUnitPicker({
                     userOrgUnits = retryUnits;
                 }
             }
-            
+
             if (userOrgUnits && userOrgUnits.length > 0) {
                 // Analyze user's org unit access levels
                 const levels = userOrgUnits.map((unit: any) => unit.level);
@@ -373,14 +614,60 @@ export default function CascadingOrgUnitPicker({
                 };
                 setUserAccessLevels(accessLevels);
 
-                // Check if user has broad access
-                // Level 1 access = full tree access
-                // Multiple level 2 units = broad regional access  
-                // Single high-level access = limited access
-                const fullAccess = minLevel === 1 || 
-                                 levelCounts.level2 > 3 || 
-                                 (minLevel === 2 && levelCounts.level2 > 1);
+                // Determine user access type for smart hierarchy handling
+                const hasMultipleLevelOptions = maxLevel > minLevel;
+                const hasMultipleUnitsAtLevel2 = levelCounts.level2 > 1;
+                const hasMultipleUnitsAtLevel3 = levelCounts.level3 > 1;
+                const totalUnits = userOrgUnits.length;
+
+                console.log("=== ACCESS DETECTION DEBUG ===");
+                console.log("Raw data:", {
+                    minLevel,
+                    maxLevel,
+                    totalUnits,
+                    levelCounts,
+                    hasMultipleLevelOptions,
+                    hasMultipleUnitsAtLevel2,
+                    hasMultipleUnitsAtLevel3
+                });
+
+                // Broad access indicators:
+                const hasLevel1WithMultipleLevel2 = (minLevel === 1 && levelCounts.level2 > 2);
+                const hasManyUnitsAcrossLevels = (totalUnits > 5 && hasMultipleLevelOptions);
+                const hasMultipleUnitsAtHighLevels = (hasMultipleUnitsAtLevel2 && hasMultipleUnitsAtLevel3);
+                // More sophisticated Level 1 access detection
+                // True broad access: Level 1 + multiple level 2 children OR many total units
+                // Limited Level 1 access: Level 1 + only specific deep level unit (like single ward)
+                const hasLevel1Access = (minLevel === 1);
+                const hasLimitedLevel1Access = hasLevel1Access && totalUnits <= 3 && hasMultipleLevelOptions;
+                const hasTrueBroadLevel1Access = hasLevel1Access && !hasLimitedLevel1Access;
+
+                console.log("Broad access indicators:", {
+                    hasLevel1WithMultipleLevel2,
+                    hasManyUnitsAcrossLevels,
+                    hasMultipleUnitsAtHighLevels,
+                    hasLevel1Access,
+                    hasLimitedLevel1Access,
+                    hasTrueBroadLevel1Access,
+                    totalUnits,
+                    hasMultipleLevelOptions
+                });
+
+                const hasBroadAccess = hasTrueBroadLevel1Access || hasLevel1WithMultipleLevel2 || hasManyUnitsAcrossLevels || hasMultipleUnitsAtHighLevels;
+
+                // Limited scope indicators:
+                const hasLimitedScope = totalUnits <= 3 && hasMultipleLevelOptions;
+
+                console.log("Final access determination:", {
+                    hasBroadAccess,
+                    hasLimitedScope,
+                    willSetFullAccess: hasBroadAccess
+                });
+
+                const fullAccess = hasBroadAccess;
                 setHasFullAccess(fullAccess);
+
+                console.log("=== END ACCESS DETECTION ===");
                 console.log("User access analysis:", {
                     levelCounts,
                     minLevel,
@@ -391,38 +678,49 @@ export default function CascadingOrgUnitPicker({
                     willShowLevel3: fullAccess || (accessLevels.minLevel <= 3 && accessLevels.maxLevel >= 4),
                     willShowLevel4: fullAccess || (accessLevels.minLevel <= 4 && accessLevels.maxLevel >= 5)
                 });
-                
+
                 // Filter org units to show appropriate level for first dropdown
                 let optionsForFirstLevel = userOrgUnits;
-                
-                // Use the user's minimum access level as the starting point
-                console.log("Filtering for level:", minLevel, "from", userOrgUnits.length, "total units");
-                if (minLevel === 1) {
-                    // User has level 1 access (country/root level), use level 1 units
-                    optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === 1);
-                    console.log("Level 1 filter result:", optionsForFirstLevel.length, "units");
-                } else if (minLevel === 2) {
-                    // User has level 2 access, use level 2 units  
-                    optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === 2);
-                    console.log("Level 2 filter result:", optionsForFirstLevel.length, "units");
+
+                // Smart hierarchy loading based on user access type
+                console.log("Loading hierarchy for user with minLevel:", minLevel, "maxLevel:", maxLevel);
+                console.log("User org units:", userOrgUnits.map(u => `${u.title} (Level ${u.level})`));
+
+                // Determine loading strategy based on access type
+                const hasMultiLevelAccess = maxLevel > minLevel;
+
+                console.log("Loading strategy:", {
+                    hasMultiLevelAccess,
+                    hasFullAccess,
+                    hasBroadAccess: hasBroadAccess
+                });
+
+                // Simplified unified loading logic
+                console.log("=== UNIFIED LOADING LOGIC ===");
+                console.log("User type:", hasBroadAccess ? "BROAD ACCESS" : "LIMITED ACCESS");
+                console.log("Will load hierarchy:", !hasBroadAccess);
+
+                if (hasBroadAccess) {
+                    // Broad access users: Load level 2 options, no auto-selection, all unlocked
+                    console.log("🟢 BROAD ACCESS: Loading level 2 options, all unlocked");
+                    setLockedLevels({
+                        level1: false,
+                        level2: false,
+                        level3: false,
+                        level4: false,
+                        level5: false,
+                    });
+
+                    // Load level 2 options for broad access users
+                    await loadBroadAccessLevel2Options();
+                    return;
                 } else {
-                    // User starts at level 3 or higher, use those as first level options
-                    optionsForFirstLevel = userOrgUnits.filter((unit: any) => unit.level === minLevel);
-                    console.log("Level", minLevel, "filter result:", optionsForFirstLevel.length, "units");
+                    // All non-broad users: Load full hierarchy with appropriate locks
+                    console.log("🔴 LIMITED ACCESS: Loading full hierarchy with locks");
+                    await loadHierarchyAndAutoSelect(userOrgUnits, maxLevel);
+                    return;
                 }
-
-                const options = optionsForFirstLevel
-                    .map((unit: any) => ({
-                        label: unit.title,
-                        value: unit.id,
-                        id: unit.id,
-                        level: unit.level
-                    }))
-                    .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
-
-                console.log("Setting first level options:", options.length, "items");
-                console.log("First few options:", options.slice(0, 3));
-                setFirstLevelOptions(options);
+                console.log("=== END UNIFIED LOADING LOGIC ===");
             } else {
                 // Fallback: load from DHIS2 if local db is empty - assume full access
                 console.log("Local database is empty, loading from DHIS2...");
@@ -435,7 +733,7 @@ export default function CascadingOrgUnitPicker({
                     hasLevel4: true,
                     hasLevel5: true
                 });
-                
+
                 const response: any = await engine.query({
                     orgUnits: {
                         resource: "organisationUnits.json",
@@ -465,6 +763,7 @@ export default function CascadingOrgUnitPicker({
         } catch (err) {
             console.error("Error loading first level data:", err);
             setError("Failed to load organization data");
+            didAutoLoad.current = false;
         } finally {
             setLoadingFirst(false);
             console.log("loadFirstLevelData completed. Loading state set to false.");
@@ -494,7 +793,8 @@ export default function CascadingOrgUnitPicker({
                 .map((child: any) => ({
                     label: child.name,
                     value: child.id,
-                    id: child.id
+                    id: child.id,
+                    level: 2
                 }))
                 .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
 
@@ -531,7 +831,8 @@ export default function CascadingOrgUnitPicker({
                 .map((child: any) => ({
                     label: child.name,
                     value: child.id,
-                    id: child.id
+                    id: child.id,
+                    level: 3
                 }))
                 .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
 
@@ -568,7 +869,8 @@ export default function CascadingOrgUnitPicker({
                 .map((child: any) => ({
                     label: child.name,
                     value: child.id,
-                    id: child.id
+                    id: child.id,
+                    level: 4
                 }))
                 .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
 
@@ -582,14 +884,53 @@ export default function CascadingOrgUnitPicker({
         }
     };
 
+    const loadFifthLevelData = async (parentId: string) => {
+        setLoadingFifth(true);
+        setError(null);
+        try {
+            const response: any = await engine.query({
+                children: {
+                    resource: "organisationUnits.json",
+                    params: {
+                        filter: `id:in:[${parentId}]`,
+                        fields: "children[id,name]",
+                        paging: "false",
+                    },
+                },
+            });
+
+            const parentUnits = response.children.organisationUnits || [];
+            const children = parentUnits.flatMap((unit: any) => unit.children || []);
+            const options = children
+                .map((child: any) => ({
+                    label: child.name,
+                    value: child.id,
+                    id: child.id,
+                    level: 5,
+                }))
+                .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
+
+            setFifthLevelOptions(options);
+        } catch (err) {
+            console.error("Error loading fifth level data:", err);
+            setError("Failed to load fifth level organizations");
+            setFifthLevelOptions([]);
+        } finally {
+            setLoadingFifth(false);
+        }
+    };
+
+
     const handleFirstLevelChange = (option: CascadingOption | null) => {
         setSelectedFirstLevel(option);
         setSelectedSecondLevel(null);
         setSelectedThirdLevel(null);
         setSelectedFourthLevel(null);
+        setSelectedFifthLevel(null);
         setSecondLevelOptions([]);
         setThirdLevelOptions([]);
         setFourthLevelOptions([]);
+        setFifthLevelOptions([]);
         setError(null);
 
         if (option) {
@@ -622,8 +963,10 @@ export default function CascadingOrgUnitPicker({
         setSelectedSecondLevel(option);
         setSelectedThirdLevel(null);
         setSelectedFourthLevel(null);
+        setSelectedFifthLevel(null);
         setThirdLevelOptions([]);
         setFourthLevelOptions([]);
+        setFifthLevelOptions([]);
 
         if (option) {
             // Load children for selected option
@@ -654,6 +997,8 @@ export default function CascadingOrgUnitPicker({
     const handleThirdLevelChange = (option: CascadingOption | null) => {
         setSelectedThirdLevel(option);
         setSelectedFourthLevel(null);
+        setSelectedFifthLevel(null);
+        setFifthLevelOptions([]);
         setFourthLevelOptions([]);
 
         if (option) {
@@ -684,9 +1029,11 @@ export default function CascadingOrgUnitPicker({
 
     const handleFourthLevelChange = (option: CascadingOption | null) => {
         setSelectedFourthLevel(option);
+        setSelectedFifthLevel(null);
+        setFifthLevelOptions([]);
 
         if (option) {
-            // Update filter with fourth level selection
+            loadFifthLevelData(option.value);
             try {
                 if (storeApi?.setOrganisations) {
                     storeApi.setOrganisations([option.value]);
@@ -708,6 +1055,31 @@ export default function CascadingOrgUnitPicker({
         }
     };
 
+    const handleFifthLevelChange = (option: CascadingOption | null) => {
+        setSelectedFifthLevel(option);
+
+        if (option) {
+            try {
+                if (storeApi?.setOrganisations) {
+                    storeApi.setOrganisations([option.value]);
+                }
+                storeApi.setSelectedOrgUnitName(option.label);
+            } catch (err) {
+                console.error("Error updating filter:", err);
+            }
+        } else if (selectedFourthLevel) {
+            try {
+                if (storeApi?.setOrganisations) {
+                    storeApi.setOrganisations([selectedFourthLevel.value]);
+                }
+                storeApi.setSelectedOrgUnitName(selectedFourthLevel.label);
+            } catch (err) {
+                console.error("Error updating filter:", err);
+            }
+        }
+    };
+
+
     if (error) {
         return (
             <Stack spacing={2} minW="300px">
@@ -727,7 +1099,8 @@ export default function CascadingOrgUnitPicker({
         loadingFirst,
         isSystemInitialized,
         hasFullAccess,
-        errorState: error
+        errorState: error,
+        lockedLevels: lockedLevels
     });
 
     return (
@@ -783,24 +1156,24 @@ export default function CascadingOrgUnitPicker({
                                     <Text ml={2} fontSize="xs">Loading...</Text>
                                 </Flex>
                             ) : (
-                                <Select<Option, true, GroupBase<Option>>
-                                    isMulti
-                                    isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
-                                    value={levels.filter((level) => 
-                                        selectedLevels.indexOf(String(level.value)) !== -1
-                                    )}
-                                    onChange={handleLevelsChange}
-                                    options={levels}
-                                    placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select levels..."}
-                                    size="sm"
-                                    menuPortalTarget={document.body}
-                                    menuPosition="fixed"
-                                    styles={{
-                                        menuPortal: (base) => ({ ...base, zIndex: 99999 }),
-                                        control: (base) => ({ ...base, minHeight: "32px" })
-                                    }}
-                                />
-                            )}
+                                    <Select<Option, true, GroupBase<Option>>
+                                        isMulti
+                                        isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth || loadingFifth}
+                                        value={levels.filter((level) =>
+                                            selectedLevels.indexOf(String(level.value)) !== -1
+                                        )}
+                                        onChange={handleLevelsChange}
+                                        options={levels}
+                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select levels..."}
+                                        size="sm"
+                                        menuPortalTarget={document.body}
+                                        menuPosition="fixed"
+                                        styles={{
+                                            menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                            control: (base) => ({ ...base, minHeight: "32px" })
+                                        }}
+                                    />
+                                )}
                         </Box>
                     )}
 
@@ -815,24 +1188,24 @@ export default function CascadingOrgUnitPicker({
                                     <Text ml={2} fontSize="xs">Loading...</Text>
                                 </Flex>
                             ) : (
-                                <Select<Option, true, GroupBase<Option>>
-                                    isMulti
-                                    isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
-                                    value={groups.filter((group) => 
-                                        selectedGroups.indexOf(String(group.value)) !== -1
-                                    )}
-                                    onChange={handleGroupsChange}
-                                    options={groups}
-                                    placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select groups..."}
-                                    size="sm"
-                                    menuPortalTarget={document.body}
-                                    menuPosition="fixed"
-                                    styles={{
-                                        menuPortal: (base) => ({ ...base, zIndex: 99999 }),
-                                        control: (base) => ({ ...base, minHeight: "32px" })
-                                    }}
-                                />
-                            )}
+                                    <Select<Option, true, GroupBase<Option>>
+                                        isMulti
+                                        isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
+                                        value={groups.filter((group) =>
+                                            selectedGroups.indexOf(String(group.value)) !== -1
+                                        )}
+                                        onChange={handleGroupsChange}
+                                        options={groups}
+                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select groups..."}
+                                        size="sm"
+                                        menuPortalTarget={document.body}
+                                        menuPosition="fixed"
+                                        styles={{
+                                            menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                            control: (base) => ({ ...base, minHeight: "32px" })
+                                        }}
+                                    />
+                                )}
                         </Box>
                     )}
 
@@ -847,36 +1220,36 @@ export default function CascadingOrgUnitPicker({
                                     <Text ml={2} fontSize="xs">Loading...</Text>
                                 </Flex>
                             ) : (
-                                <Select<GroupFromSet, true, GroupBase<GroupFromSet>>
-                                    isMulti
-                                    isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
-                                    value={groupsFromSet.filter((group) => 
-                                        selectedGroups.indexOf(group.id) !== -1
-                                    )}
-                                    onChange={handleGroupsFromSetChange}
-                                    options={groupsFromSet}
-                                    getOptionLabel={(option) => option.name}
-                                    getOptionValue={(option) => option.id}
-                                    placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select groups..."}
-                                    size="sm"
-                                    menuPortalTarget={document.body}
-                                    menuPosition="fixed"
-                                    styles={{
-                                        menuPortal: (base) => ({ ...base, zIndex: 99999 }),
-                                        control: (base) => ({ ...base, minHeight: "32px" }),
-                                        menu: (base) => ({ 
-                                            ...base, 
-                                            position: "fixed",
-                                            minWidth: "200px" 
-                                        }),
-                                        menuList: (base) => ({ 
-                                            ...base, 
-                                            maxHeight: "200px",
-                                            overflow: "auto"
-                                        })
-                                    }}
-                                />
-                            )}
+                                    <Select<GroupFromSet, true, GroupBase<GroupFromSet>>
+                                        isMulti
+                                        isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
+                                        value={groupsFromSet.filter((group) =>
+                                            selectedGroups.indexOf(group.id) !== -1
+                                        )}
+                                        onChange={handleGroupsFromSetChange}
+                                        options={groupsFromSet}
+                                        getOptionLabel={(option) => option.name}
+                                        getOptionValue={(option) => option.id}
+                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading cascading..." : "Select groups..."}
+                                        size="sm"
+                                        menuPortalTarget={document.body}
+                                        menuPosition="fixed"
+                                        styles={{
+                                            menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                            control: (base) => ({ ...base, minHeight: "32px" }),
+                                            menu: (base) => ({
+                                                ...base,
+                                                position: "fixed",
+                                                minWidth: "200px"
+                                            }),
+                                            menuList: (base) => ({
+                                                ...base,
+                                                maxHeight: "200px",
+                                                overflow: "auto"
+                                            })
+                                        }}
+                                    />
+                                )}
                         </Box>
                     )}
 
@@ -886,202 +1259,287 @@ export default function CascadingOrgUnitPicker({
                             {console.log("Rendering cascading dropdowns with", firstLevelOptions.length, "options")}
                             {/* First Level Dropdown - Always show if we have options */}
                             <Box minW="140px" position="relative">
-                        <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
-                            {userAccessLevels.minLevel === 2 ? 'Organization Units' : 
-                             userAccessLevels.minLevel === 3 ? 'Sub-units' : 
-                             userAccessLevels.minLevel === 4 ? 'Level 3' : 'Level 4'} ({firstLevelOptions.length} available)
-                        </Text>
-                        <Select<CascadingOption, false, GroupBase<CascadingOption>>
-                            value={selectedFirstLevel}
-                            onChange={handleFirstLevelChange}
-                            options={firstLevelOptions}
-                            placeholder="Select Organization..."
-                            isClearable
-                            size="sm"
-                            menuPortalTarget={document.body}
-                            menuPosition="fixed"
-                            menuPlacement="auto"
-                            styles={{
-                                menuPortal: (base) => ({
-                                    ...base,
-                                    zIndex: 99999
-                                }),
-                                menu: (base) => ({
-                                    ...base,
-                                    minWidth: "140px",
-                                    maxHeight: "200px",
-                                    overflow: "auto"
-                                }),
-                                menuList: (base) => ({
-                                    ...base,
-                                    maxHeight: "200px"
-                                }),
-                                control: (base) => ({
-                                    ...base,
-                                    minHeight: "32px"
-                                })
-                            }}
-                        />
-                    </Box>
+                                {/* <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                    {userAccessLevels.minLevel === 2 ? 'Organization Units' :
+                                        userAccessLevels.minLevel === 3 ? 'Sub-units' :
+                                            userAccessLevels.minLevel === 4 ? 'Level 3' : 'Level 4'} ({firstLevelOptions.length} available)
+                            {lockedLevels.level1 && <Text as="span" color="orange.500" ml={1}>(Auto-selected)</Text>}
+                                </Text> */}
+                                <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                    value={selectedFirstLevel}
+                                    onChange={lockedLevels.level1 ? undefined : handleFirstLevelChange}
+                                    options={firstLevelOptions}
+                                    placeholder="Select Organization..."
+                                    isClearable={!lockedLevels.level1}
+                                    isDisabled={lockedLevels.level1}
+                                    size="sm"
+                                    menuPortalTarget={document.body}
+                                    menuPosition="fixed"
+                                    menuPlacement="auto"
+                                    styles={{
+                                        menuPortal: (base) => ({
+                                            ...base,
+                                            zIndex: 99999
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            minWidth: "140px",
+                                            maxHeight: "200px",
+                                            overflow: "auto"
+                                        }),
+                                        menuList: (base) => ({
+                                            ...base,
+                                            maxHeight: "200px"
+                                        }),
+                                        control: (base) => {
+                                            console.log("Level 1 dropdown styling - lockedLevels.level1:", lockedLevels.level1);
+                                            return {
+                                                ...base,
+                                                minHeight: "32px",
+                                                backgroundColor: lockedLevels.level1 ? "#f5f5f5" : base.backgroundColor,
+                                                opacity: lockedLevels.level1 ? 0.6 : 1,
+                                                cursor: lockedLevels.level1 ? "not-allowed" : "default",
+                                                borderColor: lockedLevels.level1 ? "#d0d0d0" : base.borderColor,
+                                                "&:hover": {
+                                                    borderColor: lockedLevels.level1 ? "#d0d0d0" : base.borderColor
+                                                }
+                                            };
+                                        }
+                                    }}
+                                />
+                            </Box>
 
-                    {/* Second Level Dropdown - Show for full access users or limited access users with appropriate levels */}
-                    {(hasFullAccess || (userAccessLevels.minLevel <= 2 && userAccessLevels.maxLevel >= 3)) && (
-                        <Box minW="140px" position="relative">
-                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
-                                Sub-units ({secondLevelOptions.length} available)
-                            </Text>
-                            {loadingSecond ? (
-                                <Box display="flex" alignItems="center" justifyContent="center" h="40px">
-                                    <Spinner size="sm" />
-                                    <Text ml={2} fontSize="sm">Loading...</Text>
+                            {/* Second Level Dropdown - Show if has data OR is locked (parent context) */}
+                            {(secondLevelOptions.length > 0 || lockedLevels.level2) && (
+                                <Box minW="140px" position="relative">
+                                    {/* <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                        Sub-units ({secondLevelOptions.length} available)
+                                {lockedLevels.level2 && <Text as="span" color="orange.500" ml={1}>(Auto-selected)</Text>}
+                                    </Text> */}
+                                    {loadingSecond ? (
+                                        <Box display="flex" alignItems="center" justifyContent="center" h="40px">
+                                            <Spinner size="sm" />
+                                            <Text ml={2} fontSize="sm">Loading...</Text>
+                                        </Box>
+                                    ) : (
+                                            <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                                value={selectedSecondLevel}
+                                                onChange={lockedLevels.level2 ? undefined : handleSecondLevelChange}
+                                                options={secondLevelOptions}
+                                                placeholder={selectedFirstLevel ? "Select Sub-unit..." : "Select Organization first"}
+                                                isClearable={!lockedLevels.level2}
+                                                size="sm"
+                                                isDisabled={!selectedFirstLevel || lockedLevels.level2}
+                                                menuPortalTarget={document.body}
+                                                menuPosition="fixed"
+                                                menuPlacement="auto"
+                                                styles={{
+                                                    menuPortal: (base) => ({
+                                                        ...base,
+                                                        zIndex: 99999
+                                                    }),
+                                                    menu: (base) => ({
+                                                        ...base,
+                                                        minWidth: "140px",
+                                                        maxHeight: "200px",
+                                                        overflow: "auto"
+                                                    }),
+                                                    menuList: (base) => ({
+                                                        ...base,
+                                                        maxHeight: "200px"
+                                                    }),
+                                                    control: (base) => {
+                                                        console.log("Level 2 dropdown styling - lockedLevels.level2:", lockedLevels.level2);
+                                                        return {
+                                                            ...base,
+                                                            minHeight: "32px",
+                                                            backgroundColor: lockedLevels.level2 ? "#f5f5f5" : base.backgroundColor,
+                                                            opacity: lockedLevels.level2 ? 0.6 : 1,
+                                                            cursor: lockedLevels.level2 ? "not-allowed" : "default",
+                                                            borderColor: lockedLevels.level2 ? "#d0d0d0" : base.borderColor,
+                                                            "&:hover": {
+                                                                borderColor: lockedLevels.level2 ? "#d0d0d0" : base.borderColor
+                                                            }
+                                                        };
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    {/* {!loadingSecond && selectedFirstLevel && secondLevelOptions.length === 0 && (
+                                        <Text fontSize="xs" color="gray.500" mt={1}>
+                                            No sub-units available
+                                        </Text>
+                                    )} */}
                                 </Box>
-                            ) : (
-                                    <Select<CascadingOption, false, GroupBase<CascadingOption>>
-                                        value={selectedSecondLevel}
-                                        onChange={handleSecondLevelChange}
-                                        options={secondLevelOptions}
-                                        placeholder={selectedFirstLevel ? "Select Sub-unit..." : "Select Organization first"}
-                                        isClearable
-                                        size="sm"
-                                        isDisabled={!selectedFirstLevel}
-                                        menuPortalTarget={document.body}
-                                        menuPosition="fixed"
-                                        menuPlacement="auto"
-                                        styles={{
-                                            menuPortal: (base) => ({
-                                                ...base,
-                                                zIndex: 99999
-                                            }),
-                                            menu: (base) => ({
-                                                ...base,
-                                                minWidth: "140px",
-                                                maxHeight: "200px",
-                                                overflow: "auto"
-                                            }),
-                                            menuList: (base) => ({
-                                                ...base,
-                                                maxHeight: "200px"
-                                            }),
-                                            control: (base) => ({
-                                                ...base,
-                                                minHeight: "32px"
-                                            })
-                                        }}
-                                    />
-                                )}
-                            {!loadingSecond && selectedFirstLevel && secondLevelOptions.length === 0 && (
-                                <Text fontSize="xs" color="gray.500" mt={1}>
-                                    No sub-units available
-                                </Text>
                             )}
-                        </Box>
-                    )}
 
-                    {/* Third Level Dropdown - Show for full access users or limited access users with appropriate levels */}
-                    {(hasFullAccess || (userAccessLevels.minLevel <= 3 && userAccessLevels.maxLevel >= 4)) && (
-                        <Box minW="140px" position="relative">
-                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
-                                Level 3 ({thirdLevelOptions.length} available)
-                            </Text>
-                            {loadingThird ? (
-                                <Box display="flex" alignItems="center" justifyContent="center" h="40px">
-                                    <Spinner size="sm" />
-                                    <Text ml={2} fontSize="sm">Loading...</Text>
+                            {/* Third Level Dropdown - Show if has data OR is locked (parent context) */}
+                            {(thirdLevelOptions.length > 0 || lockedLevels.level3) && (
+                                <Box minW="140px" position="relative">
+                                    {/* <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                        Level 3 ({thirdLevelOptions.length} available)
+                            </Text> */}
+                                    {loadingThird ? (
+                                        <Box display="flex" alignItems="center" justifyContent="center" h="40px">
+                                            <Spinner size="sm" />
+                                            <Text ml={2} fontSize="sm">Loading...</Text>
+                                        </Box>
+                                    ) : (
+                                            <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                                value={selectedThirdLevel}
+                                                onChange={lockedLevels.level3 ? undefined : handleThirdLevelChange}
+                                                options={thirdLevelOptions}
+                                                placeholder={selectedSecondLevel ? "Select Level 3..." : "Select Sub-unit first"}
+                                                isClearable={!lockedLevels.level3}
+                                                size="sm"
+                                                isDisabled={!selectedSecondLevel || lockedLevels.level3}
+                                                menuPortalTarget={document.body}
+                                                menuPosition="fixed"
+                                                menuPlacement="auto"
+                                                styles={{
+                                                    menuPortal: (base) => ({
+                                                        ...base,
+                                                        zIndex: 99999
+                                                    }),
+                                                    menu: (base) => ({
+                                                        ...base,
+                                                        minWidth: "140px",
+                                                        maxHeight: "200px",
+                                                        overflow: "auto"
+                                                    }),
+                                                    menuList: (base) => ({
+                                                        ...base,
+                                                        maxHeight: "200px"
+                                                    }),
+                                                    control: (base) => ({
+                                                        ...base,
+                                                        minHeight: "32px",
+                                                        backgroundColor: lockedLevels.level3 ? "#f5f5f5" : base.backgroundColor,
+                                                        opacity: lockedLevels.level3 ? 0.6 : 1,
+                                                        cursor: lockedLevels.level3 ? "not-allowed" : "default",
+                                                        borderColor: lockedLevels.level3 ? "#d0d0d0" : base.borderColor,
+                                                        "&:hover": {
+                                                            borderColor: lockedLevels.level3 ? "#d0d0d0" : base.borderColor
+                                                        }
+                                                    })
+                                                }}
+                                            />
+                                        )}
+                                    {/* {!loadingThird && selectedSecondLevel && thirdLevelOptions.length === 0 && (
+                                        <Text fontSize="xs" color="gray.500" mt={1}>
+                                            No Level 3 units available
+                                        </Text>
+                                    )} */}
                                 </Box>
-                            ) : (
-                                    <Select<CascadingOption, false, GroupBase<CascadingOption>>
-                                        value={selectedThirdLevel}
-                                        onChange={handleThirdLevelChange}
-                                        options={thirdLevelOptions}
-                                        placeholder={selectedSecondLevel ? "Select Level 3..." : "Select Sub-unit first"}
-                                        isClearable
-                                        size="sm"
-                                        isDisabled={!selectedSecondLevel}
-                                        menuPortalTarget={document.body}
-                                        menuPosition="fixed"
-                                        menuPlacement="auto"
-                                        styles={{
-                                            menuPortal: (base) => ({
-                                                ...base,
-                                                zIndex: 99999
-                                            }),
-                                            menu: (base) => ({
-                                                ...base,
-                                                minWidth: "140px",
-                                                maxHeight: "200px",
-                                                overflow: "auto"
-                                            }),
-                                            menuList: (base) => ({
-                                                ...base,
-                                                maxHeight: "200px"
-                                            }),
-                                            control: (base) => ({
-                                                ...base,
-                                                minHeight: "32px"
-                                            })
-                                        }}
-                                    />
-                                )}
-                            {!loadingThird && selectedSecondLevel && thirdLevelOptions.length === 0 && (
-                                <Text fontSize="xs" color="gray.500" mt={1}>
-                                    No Level 3 units available
-                                </Text>
                             )}
-                        </Box>
-                    )}
 
-                    {/* Fourth Level Dropdown - Show for full access users or limited access users with appropriate levels */}
-                    {(hasFullAccess || (userAccessLevels.minLevel <= 4 && userAccessLevels.maxLevel >= 5)) && (
-                        <Box minW="140px" position="relative">
-                            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
-                                Level 4 ({fourthLevelOptions.length} available)
-                            </Text>
-                            {loadingFourth ? (
-                                <Box display="flex" alignItems="center" justifyContent="center" h="40px">
-                                    <Spinner size="sm" />
-                                    <Text ml={2} fontSize="sm">Loading...</Text>
+                            {/* Fourth Level Dropdown - Show if has data OR is locked (parent context) */}
+                            {(fourthLevelOptions.length > 0 || lockedLevels.level4) && (
+                                <Box minW="140px" position="relative">
+                                    {/* <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                        Level 4 ({fourthLevelOptions.length} available)
+                            </Text> */}
+                                    {loadingFourth ? (
+                                        <Box display="flex" alignItems="center" justifyContent="center" h="40px">
+                                            <Spinner size="sm" />
+                                            <Text ml={2} fontSize="sm">Loading...</Text>
+                                        </Box>
+                                    ) : (
+                                            <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                                value={selectedFourthLevel}
+                                                onChange={lockedLevels.level4 ? undefined : handleFourthLevelChange}
+                                                options={fourthLevelOptions}
+                                                placeholder={selectedThirdLevel ? "Select Level 4..." : "Select Level 3 first"}
+                                                isClearable={!lockedLevels.level4}
+                                                size="sm"
+                                                isDisabled={!selectedThirdLevel || lockedLevels.level4}
+                                                menuPortalTarget={document.body}
+                                                menuPosition="fixed"
+                                                menuPlacement="auto"
+                                                styles={{
+                                                    menuPortal: (base) => ({
+                                                        ...base,
+                                                        zIndex: 99999
+                                                    }),
+                                                    menu: (base) => ({
+                                                        ...base,
+                                                        minWidth: "140px",
+                                                        maxHeight: "200px",
+                                                        overflow: "auto"
+                                                    }),
+                                                    menuList: (base) => ({
+                                                        ...base,
+                                                        maxHeight: "200px"
+                                                    }),
+                                                    control: (base) => ({
+                                                        ...base,
+                                                        minHeight: "32px",
+                                                        backgroundColor: lockedLevels.level4 ? "#f5f5f5" : base.backgroundColor,
+                                                        opacity: lockedLevels.level4 ? 0.6 : 1,
+                                                        cursor: lockedLevels.level4 ? "not-allowed" : "default",
+                                                        borderColor: lockedLevels.level4 ? "#d0d0d0" : base.borderColor,
+                                                        "&:hover": {
+                                                            borderColor: lockedLevels.level4 ? "#d0d0d0" : base.borderColor
+                                                        }
+                                                    })
+                                                }}
+                                            />
+                                        )}
+                                    {/* {!loadingFourth && selectedThirdLevel && fourthLevelOptions.length === 0 && (
+                                        <Text fontSize="xs" color="gray.500" mt={1}>
+                                            No Level 4 units available
+                                        </Text>
+                                    )} */}
                                 </Box>
-                            ) : (
-                                    <Select<CascadingOption, false, GroupBase<CascadingOption>>
-                                        value={selectedFourthLevel}
-                                        onChange={handleFourthLevelChange}
-                                        options={fourthLevelOptions}
-                                        placeholder={selectedThirdLevel ? "Select Level 4..." : "Select Level 3 first"}
-                                        isClearable
-                                        size="sm"
-                                        isDisabled={!selectedThirdLevel}
-                                        menuPortalTarget={document.body}
-                                        menuPosition="fixed"
-                                        menuPlacement="auto"
-                                        styles={{
-                                            menuPortal: (base) => ({
-                                                ...base,
-                                                zIndex: 99999
-                                            }),
-                                            menu: (base) => ({
-                                                ...base,
-                                                minWidth: "140px",
-                                                maxHeight: "200px",
-                                                overflow: "auto"
-                                            }),
-                                            menuList: (base) => ({
-                                                ...base,
-                                                maxHeight: "200px"
-                                            }),
-                                            control: (base) => ({
-                                                ...base,
-                                                minHeight: "32px"
-                                            })
-                                        }}
-                                    />
-                                )}
-                            {!loadingFourth && selectedThirdLevel && fourthLevelOptions.length === 0 && (
-                                <Text fontSize="xs" color="gray.500" mt={1}>
-                                    No Level 4 units available
-                                </Text>
                             )}
-                        </Box>
-                    )}
+
+                            {/* Fifth Level Dropdown - Show if has data OR is locked (parent context) */}
+                            {(fifthLevelOptions.length > 0 || lockedLevels.level5) && (
+                                <Box minW="140px" position="relative">
+                                    {/* <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+                                        Level 5 ({fifthLevelOptions.length} available)
+                                    </Text> */}
+                                    {loadingFifth ? (
+                                        <Box display="flex" alignItems="center" justifyContent="center" h="40px">
+                                            <Spinner size="sm" />
+                                            <Text ml={2} fontSize="sm">Loading...</Text>
+                                        </Box>
+                                    ) : (
+                                            <Select<CascadingOption, false, GroupBase<CascadingOption>>
+                                                value={selectedFifthLevel}
+                                                onChange={lockedLevels.level5 ? undefined : handleFifthLevelChange}
+                                                options={fifthLevelOptions}
+                                                placeholder={selectedFourthLevel ? "Select Sch..." : "Select Level 4 first"}
+                                                isClearable={!lockedLevels.level5}
+                                                size="sm"
+                                                isDisabled={!selectedFourthLevel || lockedLevels.level5}
+                                                menuPortalTarget={document.body}
+                                                menuPosition="fixed"
+                                                menuPlacement="auto"
+                                                styles={{
+                                                    menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+                                                    menu: (base) => ({ ...base, minWidth: "140px", maxHeight: "200px", overflow: "auto" }),
+                                                    menuList: (base) => ({ ...base, maxHeight: "200px" }),
+                                                    control: (base) => ({
+                                                        ...base,
+                                                        minHeight: "32px",
+                                                        backgroundColor: lockedLevels.level5 ? "#f5f5f5" : base.backgroundColor,
+                                                        opacity: lockedLevels.level5 ? 0.6 : 1,
+                                                        cursor: lockedLevels.level5 ? "not-allowed" : "default",
+                                                        borderColor: lockedLevels.level5 ? "#d0d0d0" : base.borderColor,
+                                                        "&:hover": { borderColor: lockedLevels.level5 ? "#d0d0d0" : base.borderColor },
+                                                    }),
+                                                }}
+                                            />
+                                        )}
+                                    {/* {!loadingFifth && selectedFourthLevel && fifthLevelOptions.length === 0 && (
+                                        <Text fontSize="xs" color="gray.500" mt={1}>
+                                            No Level 5 units available
+                                        </Text>
+                                    )} */}
+                                </Box>
+                            )}
+
                         </>
                     )}
                 </Flex>
@@ -1098,19 +1556,21 @@ export default function CascadingOrgUnitPicker({
             {/* Current Selection Display */}
             {(selectedFirstLevel || selectedSecondLevel || selectedThirdLevel || selectedFourthLevel) && (
                 <Box mt={2}>
-                    <Text fontSize="xs" fontWeight="medium" color="gray.500">
+                    {/* <Text fontSize="xs" fontWeight="medium" color="gray.500">
                         Selected Organization:
-                    </Text>
-                    <Badge colorScheme="blue" fontSize="xs" mt={1}>
-                        {selectedFourthLevel
-                            ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel?.label} → ${selectedFourthLevel.label}`
-                            : selectedThirdLevel
-                                ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel.label}`
-                                : selectedSecondLevel
-                                    ? `${selectedFirstLevel?.label} → ${selectedSecondLevel.label}`
-                                    : selectedFirstLevel?.label || "None"
+                    </Text> */}
+                    {/* <Badge colorScheme="blue" fontSize="xs" mt={1}>
+                        {selectedFifthLevel
+                            ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel?.label} → ${selectedFourthLevel?.label} → ${selectedFifthLevel.label}`
+                            : selectedFourthLevel
+                                ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel?.label} → ${selectedFourthLevel.label}`
+                                : selectedThirdLevel
+                                    ? `${selectedFirstLevel?.label} → ${selectedSecondLevel?.label} → ${selectedThirdLevel.label}`
+                                    : selectedSecondLevel
+                                        ? `${selectedFirstLevel?.label} → ${selectedSecondLevel.label}`
+                                        : selectedFirstLevel?.label || "None"
                         }
-                    </Badge>
+                    </Badge> */}
                 </Box>
             )}
         </Stack>

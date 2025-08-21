@@ -40,11 +40,11 @@ const rangePresets: {
   label: string;
   value: [Dayjs, Dayjs];
 }[] = [
-  { label: "Last 7 Days", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "Last 14 Days", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "Last 30 Days", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "Last 90 Days", value: [dayjs().add(-90, "d"), dayjs()] },
-];
+    { label: "Last 7 Days", value: [dayjs().add(-7, "d"), dayjs()] },
+    { label: "Last 14 Days", value: [dayjs().add(-14, "d"), dayjs()] },
+    { label: "Last 30 Days", value: [dayjs().add(-30, "d"), dayjs()] },
+    { label: "Last 90 Days", value: [dayjs().add(-90, "d"), dayjs()] },
+  ];
 
 const relativePeriodTypeOptions = createOptions2(
   [
@@ -262,14 +262,14 @@ const PeriodSelector = ({ selectedPeriods, onChange }: PickerProps) => {
             const others: Period[] =
               tabIndex === 0
                 ? availableRelativePeriods.map((val) => {
-                    const opt: Period = {
-                      ...val,
-                      type: "relative",
-                    };
-                    return opt;
-                  })
+                  const opt: Period = {
+                    ...val,
+                    type: "relative",
+                  };
+                  return opt;
+                })
                 : tabIndex === 1
-                ? availableFixedPeriods.map(
+                  ? availableFixedPeriods.map(
                     ({ id, name, startDate, endDate }) => {
                       return {
                         value: id,
@@ -280,7 +280,7 @@ const PeriodSelector = ({ selectedPeriods, onChange }: PickerProps) => {
                       };
                     }
                   )
-                : [];
+                  : [];
             onChange([...selectedPeriods, ...others], false);
           }}
         />
