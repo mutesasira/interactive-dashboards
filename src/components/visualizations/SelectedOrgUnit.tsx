@@ -12,9 +12,9 @@ export default function SelectedOrgUnit() {
 
     return (
         <Box>
-            <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
+            {/* <Text fontSize="xs" fontWeight="medium" color="gray.500" mb={1}>
                 Selected Organization
-            </Text>
+            </Text> */}
             <Badge colorScheme="blue" fontSize="sm" px={2} py={1}>
                 {store.selectedOrgUnitName}
             </Badge>
