@@ -15,6 +15,7 @@ import OUTree from "../OUTree";
 import LoadingIndicator from "../LoadingIndicator";
 import OrgUnitPicker2 from "../filters/OrgUnitPicker2";
 import CascadingOrgUnitPicker from "../filters/CascadingOrgUnitPicker";
+import DefaultOrgUnitFilter from "../filters/DefaultOrgUnitFilter";
 import OrgUnitLevelsPicker from "../filters/OrgUnitLevelsPicker";
 import OrgUnitGroupsPicker from "../filters/OrgUnitGroupsPicker";
 import SelectedOrgUnit from "./SelectedOrgUnit";
@@ -126,13 +127,26 @@ export default function Filters({
                 }
                 if (i === "cascading-organisations") {
                   return [
+                    <div key="default-org-filter">
+                      <DefaultOrgUnitFilter />
+                    </div>,
                     <div key={i}>
                       <CascadingOrgUnitPicker />
                     </div>
                   ];
                 }
+                if (i === "default-org-unit-filter") {
+                  return [
+                    <div key={i}>
+                      <DefaultOrgUnitFilter />
+                    </div>
+                  ];
+                }
                 if (i === "cascading-organisations-with-levels") {
                   return [
+                    <div key="default-org-filter">
+                      <DefaultOrgUnitFilter />
+                    </div>,
                     <div key={i}>
                       <CascadingOrgUnitPicker showLevels={true} />
                     </div>
@@ -140,6 +154,9 @@ export default function Filters({
                 }
                 if (i === "cascading-organisations-with-groups") {
                   return [
+                    <div key="default-org-filter">
+                      <DefaultOrgUnitFilter />
+                    </div>,
                     <div key={i}>
                       <CascadingOrgUnitPicker showGroups={true} />
                     </div>
@@ -147,6 +164,9 @@ export default function Filters({
                 }
                 if (i === "cascading-organisations-with-all") {
                   return [
+                    <div key="default-org-filter">
+                      <DefaultOrgUnitFilter />
+                    </div>,
                     <div key={i}>
                       <CascadingOrgUnitPicker showLevels={true} showGroups={true} />
                     </div>
@@ -155,6 +175,9 @@ export default function Filters({
                 if (i === "cascading-organisations-with-groupset") {
                   const groupSetId = visualization.properties["cascade.groupSet"];
                   return [
+                    <div key="default-org-filter">
+                      <DefaultOrgUnitFilter />
+                    </div>,
                     <div key={i}>
                       <CascadingOrgUnitPicker showGroupSets={true} selectedGroupSet={groupSetId} />
                     </div>
@@ -224,20 +247,23 @@ export default function Filters({
           return [<OrgUnitPicker key={i} />];
         }
         if (i === "cascading-organisations") {
-          return [<CascadingOrgUnitPicker key={i} />];
+          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} />];
+        }
+        if (i === "default-org-unit-filter") {
+          return [<DefaultOrgUnitFilter key={i} />];
         }
         if (i === "cascading-organisations-with-levels") {
-          return [<CascadingOrgUnitPicker key={i} showLevels={true} />];
+          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} showLevels={true} />];
         }
         if (i === "cascading-organisations-with-groups") {
-          return [<CascadingOrgUnitPicker key={i} showGroups={true} />];
+          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} showGroups={true} />];
         }
         if (i === "cascading-organisations-with-all") {
-          return [<CascadingOrgUnitPicker key={i} showLevels={true} showGroups={true} />];
+          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} showLevels={true} showGroups={true} />];
         }
         if (i === "cascading-organisations-with-groupset") {
           const groupSetId = visualization.properties["cascade.groupSet"];
-          return [<CascadingOrgUnitPicker key={i} showGroupSets={true} selectedGroupSet={groupSetId} />];
+          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} showGroupSets={true} selectedGroupSet={groupSetId} />];
         }
         if (i === "selected-orgunit") {
           return [<SelectedOrgUnit key={i} />];
