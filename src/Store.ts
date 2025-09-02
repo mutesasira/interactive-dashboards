@@ -429,12 +429,12 @@ export const $globalFilters = combine(
       mclvD0Z9mfT: store.organisations,
       ww1uoD3DsYg: [store.minSublevel],
     };
-    
+
     // Add levels filter if levels are selected
     if (store.levels.length > 0) {
       filters = { ...filters, GQhi6pRnTKF: store.levels };
     }
-    
+
     // Add groups filter if groups are selected
     if (store.groups.length > 0) {
       filters = { ...filters, of2WvtwqbHR: store.groups };
@@ -579,4 +579,3 @@ export const $userGroup = domain.createStore<Partial<IUserGroup>>({
   description: "",
 });
 
-// $dashboard.watch((v) => console.log(v));

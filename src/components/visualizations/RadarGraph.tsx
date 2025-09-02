@@ -13,8 +13,6 @@ const RadarGraph = ({ visualization }: RadarGraphProps) => {
     const visualizationMetadata = useStore($visualizationMetadata)?.[
         visualization.id
     ];
-    // console.log("your data is:", visualizationData);
-    // console.log("your meta data is:", visualizationMetadata);
     const datas = Object.entries(visualizationData || {}).map(([key, data]) => {
         const metadata = visualizationMetadata?.[data.pe];
 

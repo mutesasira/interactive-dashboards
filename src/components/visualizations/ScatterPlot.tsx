@@ -13,8 +13,6 @@ interface ScatterPlotProps extends ChartProps {
 const ScatterPlot = ({ visualization }: ScatterPlotProps) => {
     const visualizationData = useStore($visualizationData)?.[visualization.id];
     const metadata = useStore($visualizationMetadata)?.[visualization.id];
-    console.log("visdata", visualizationData);
-    console.log("metadata", metadata);
     const traces =
         visualizationData?.map((data: any, i: number) => {
             const monthData = metadata?.[data.pe];
@@ -28,8 +26,6 @@ const ScatterPlot = ({ visualization }: ScatterPlotProps) => {
                 },
             };
         }) || [];
-    console.log("visualisation:", visualization);
-    console.log("traces:", traces);
     return (
         <Plot
             // TODO Fix this as any

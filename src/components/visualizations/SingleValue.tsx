@@ -218,7 +218,6 @@ const SingleValue = ({
       value: numericValue,
     });
     
-    console.log(`SingleValue: Updated calculated store - ${visualization.id} = ${numericValue}`);
   }, [visualization.id, value]);
   const numberFormatter = Intl.NumberFormat("en-US", format);
 

@@ -34,8 +34,15 @@ export default function CascadingOrgUnitPicker({
     showGroupSets = false,
     selectedGroupSet
 }: CascadingOrgUnitPickerProps) {
+    console.log("🔧 CascadingOrgUnitPicker props:", { showLevels, showGroups, showGroupSets, selectedGroupSet });
     const engine = useDataEngine();
     const store = useStore($store);
+    console.log("🔍 Store state on render:", { 
+        groups: store.groups, 
+        organisations: store.organisations, 
+        levels: store.levels,
+        storeGroupsLength: store.groups?.length || 0 
+    });
 
 
     // --- Core state used by cache guard and loaders ---
@@ -125,13 +132,32 @@ export default function CascadingOrgUnitPicker({
                 });
             });
 
+            // remove any explicit OU id tokens (from OrgUnitTree or other sources)
+            (store.organisations || []).forEach((orgId: string) => {
+                datumAPi.changeDimension({
+                    id: orgId,
+                    type: "filter",
+                    dimension: "ou",
+                    resource: "ou",
+                    remove: true,
+                });
+                datumAPi.changeDimension({
+                    id: orgId,
+                    type: "dimension",
+                    dimension: "ou",
+                    resource: "ou",
+                    remove: true,
+                });
+            });
+
             // clear store copies too
             storeApi.changeLevels([]);
             storeApi.setGroups([]);
+            storeApi?.setOrganisations?.([]);
         } catch (e) {
             console.warn("clearOuFilters failed:", e);
         }
-    }, [store.levels, store.groups]);
+    }, [store.levels, store.groups, store.organisations]);
 
     const selectHighestAccessibleLevel = useCallback(async () => {
         if (!hasFullAccess && userAccessLevels.minLevel && firstLevelOptions.length > 0) {
@@ -144,7 +170,6 @@ export default function CascadingOrgUnitPicker({
                 const optionToSelect = firstLevelOptions.find(opt => opt.id === highestLevelUnit.id);
 
                 if (optionToSelect) {
-                    console.log(`Auto-selecting highest accessible level: ${optionToSelect.label} (Level ${optionToSelect.level})`);
 
                     // Set the selection and update global store
                     setSelectedFirstLevel(optionToSelect);
@@ -188,7 +213,6 @@ export default function CascadingOrgUnitPicker({
         // After clearing cascading filters, clear the selection completely 
         // (DefaultOrgUnitFilter will handle setting appropriate defaults)
         setTimeout(() => {
-            console.log("Cleared all cascading filters - DefaultOrgUnitFilter will handle defaults");
         }, 100);
     }, []);
 
@@ -197,14 +221,12 @@ export default function CascadingOrgUnitPicker({
         const currentUserKey = await getCurrentUserKey();
 
         if (!hasEverLoggedIn) {
-            console.log("First user login detected. Refreshing IndexedDB...");
 
             // Clear all existing data to ensure fresh start
             await db.organisations.clear();
 
             // Fetch fresh organizational data from DHIS2
             try {
-                console.log("Fetching fresh organizational data from DHIS2...");
                 const response: any = await engine.query({
                     userOrgUnits: {
                         resource: "me",
@@ -219,7 +241,6 @@ export default function CascadingOrgUnitPicker({
                 if (userOrgUnits.length > 0) {
                     // Store fresh data in IndexedDB
                     await db.organisations.bulkAdd(userOrgUnits);
-                    console.log(`Refreshed IndexedDB with ${userOrgUnits.length} organizational units for first user`);
 
                     // Mark that a user has logged in
                     localStorage.setItem("has-user-logged-in", "true");
@@ -335,9 +356,11 @@ export default function CascadingOrgUnitPicker({
                     },
                 },
             });
-            setGroups(response.groups?.organisationUnitGroups || []);
+            const groupsData = response.groups?.organisationUnitGroups || [];
+            setGroups(groupsData);
+            console.log("✅ Loaded OU groups:", groupsData.length, "groups found:", groupsData);
         } catch (err) {
-            console.error("Error loading groups:", err);
+            console.error("❌ Error loading groups:", err);
         } finally {
             setLoadingGroups(false);
         }
@@ -367,6 +390,7 @@ export default function CascadingOrgUnitPicker({
     // Function to load groups from a specific group set
     const loadGroupsFromSet = async (groupSetId: string) => {
         setLoadingGroupsFromSet(true);
+        console.log("🔄 Loading groups from set:", groupSetId);
         try {
             const response: any = await engine.query({
                 groupSet: {
@@ -379,8 +403,9 @@ export default function CascadingOrgUnitPicker({
 
             const groupsData = response.groupSet?.organisationUnitGroups || [];
             setGroupsFromSet(groupsData);
+            console.log("✅ Loaded groups from set:", groupsData.length, "groups found:", groupsData);
         } catch (err) {
-            console.error("Error loading groups from set:", err);
+            console.error("❌ Error loading groups from set:", err);
             setGroupsFromSet([]);
         } finally {
             setLoadingGroupsFromSet(false);
@@ -403,9 +428,30 @@ export default function CascadingOrgUnitPicker({
     // Effect to load groups when group set is selected
     useEffect(() => {
         if (selectedGroupSet && showGroupSets) {
+            console.log("🔧 Loading groups from set due to useEffect:", { selectedGroupSet, showGroupSets });
             loadGroupsFromSet(selectedGroupSet);
         }
     }, [selectedGroupSet, showGroupSets]);
+
+    // Effect to set initial group selection
+    useEffect(() => {
+        if (groupsFromSet.length > 0 && selectedGroups.length === 0 && showGroupSets) {
+            console.log("🎯 Setting initial group selection from store.groups:", store.groups);
+            // If store already has groups selected, use those
+            if (store.groups && store.groups.length > 0) {
+                const firstStoreGroup = store.groups[0];
+                console.log("📌 Found existing group in store:", firstStoreGroup);
+                // Verify this group exists in our loaded groups
+                const matchingGroup = groupsFromSet.find(g => g.id === firstStoreGroup);
+                if (matchingGroup) {
+                    console.log("✅ Initial group found in loaded groups:", matchingGroup);
+                } else {
+                    console.log("⚠️ Store group not found in loaded groups, clearing store");
+                    storeApi.setGroups([]);
+                }
+            }
+        }
+    }, [groupsFromSet, selectedGroups, showGroupSets, store.groups]);
 
     // Effect to monitor system initialization
     useEffect(() => {
@@ -456,7 +502,6 @@ export default function CascadingOrgUnitPicker({
             if (firstLevelOptions.length > 0 && !selectedFirstLevel && !loadingFirst) {
                 const autoSelected = await selectHighestAccessibleLevel();
                 if (autoSelected) {
-                    console.log("Auto-selected highest accessible level after loading options");
                 }
             }
         };
@@ -500,8 +545,9 @@ export default function CascadingOrgUnitPicker({
         storeApi.changeLevels(levelIds);
     };
 
-    const handleGroupsChange = (selectedOptions: readonly Option[] | null) => {
-        const groupIds = selectedOptions?.map((option) => String(option.value)) || [];
+    const handleGroupsChange = (selectedOption: Option | null) => {
+        const groupId = selectedOption ? String(selectedOption.value) : null;
+        console.log('🏷️ Group changed:', { selectedOption, groupId, currentGroups: selectedGroups });
 
         // Clear any specific OU selections when groups are changed
         clearCascadingOuSelections();
@@ -509,6 +555,7 @@ export default function CascadingOrgUnitPicker({
         // Clear existing group dimensions first
         if (selectedGroups.length > 0) {
             selectedGroups.forEach(groupId => {
+                console.log('🗑️ Removing group dimension:', groupId);
                 datumAPi.changeDimension({
                     id: groupId,
                     type: "filter",
@@ -520,8 +567,9 @@ export default function CascadingOrgUnitPicker({
             });
         }
 
-        // Add new group dimensions
-        groupIds.forEach(groupId => {
+        // Add new group dimension if selected
+        if (groupId) {
+            console.log('➕ Adding group dimension:', groupId);
             datumAPi.changeDimension({
                 id: groupId,
                 type: "filter",
@@ -529,19 +577,27 @@ export default function CascadingOrgUnitPicker({
                 resource: "oug",
                 prefix: "OU_GROUP-",
             });
+            storeApi.setGroups([groupId]);
+        } else {
+            console.log('❌ No group selected, clearing groups');
+            storeApi.setGroups([]);
+        }
+        
+        console.log('📊 Store state after group change:', { 
+            groups: store.groups, 
+            organisations: store.organisations, 
+            levels: store.levels 
         });
-
-        // Also update the global store for UI consistency
-        storeApi.setGroups(groupIds);
     };
 
-    const handleGroupsFromSetChange = (selectedOptions: readonly GroupFromSet[] | null) => {
-        const groupIds = selectedOptions?.map((option) => option.id) || [];
+    const handleGroupsFromSetChange = (selectedOption: GroupFromSet | null) => {
+        const groupId = selectedOption ? selectedOption.id : null;
+        console.log('🏷️ Group from set changed:', { selectedOption, groupId, currentGroups: selectedGroups });
 
         // Clear any specific OU selections when groups from set are changed
         clearCascadingOuSelections();
 
-        // Clear ALL existing group dimensions first - not just from current set
+        // Clear ALL existing group dimensions first
         if (selectedGroups.length > 0) {
             selectedGroups.forEach(groupId => {
                 datumAPi.changeDimension({
@@ -555,8 +611,8 @@ export default function CascadingOrgUnitPicker({
             });
         }
 
-        // Add new group dimensions
-        groupIds.forEach(groupId => {
+        // Add new group dimension if selected
+        if (groupId) {
             datumAPi.changeDimension({
                 id: groupId,
                 type: "filter",
@@ -564,10 +620,10 @@ export default function CascadingOrgUnitPicker({
                 resource: "oug",
                 prefix: "OU_GROUP-",
             });
-        });
-
-        // Also update the global store for UI consistency
-        storeApi.setGroups(groupIds);
+            storeApi.setGroups([groupId]);
+        } else {
+            storeApi.setGroups([]);
+        }
     };
 
 
@@ -599,7 +655,6 @@ export default function CascadingOrgUnitPicker({
                 .sort((a: CascadingOption, b: CascadingOption) => a.label.localeCompare(b.label));
 
             setFirstLevelOptions(options);
-            console.log(`Loaded ${options.length} broad access options (level 2 states only - level 1 handled by DefaultOrgUnitFilter)`);
 
         } catch (error) {
             console.error("Error loading broad access options:", error);
@@ -817,7 +872,6 @@ export default function CascadingOrgUnitPicker({
                 const hasEverLoggedIn = localStorage.getItem("has-user-logged-in");
                 if (!hasEverLoggedIn) {
                     // First user case - we might have just loaded fresh data, don't clear it
-                    console.log("First user detected in loadFirstLevelData, skipping cache clear");
                 } else {
                     await ensureCacheForUser();
                     // After cache clearing, return early and let the system reinitialize
@@ -1416,15 +1470,24 @@ export default function CascadingOrgUnitPicker({
                                     <Text ml={2} fontSize="xs">Loading...</Text>
                                 </Flex>
                             ) : (
-                                    <Select<Option, true, GroupBase<Option>>
-                                        isMulti
+                                    <Select<Option, false, GroupBase<Option>>
                                         isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
-                                        value={groups.filter((group) =>
-                                            selectedGroups.indexOf(String(group.value)) !== -1
-                                        )}
+                                        value={(() => {
+                                            const currentGroupId = selectedGroups[0];
+                                            const selectedGroup = groups.find(g => String(g.value) === String(currentGroupId)) || null;
+                                            console.log("🎯 Groups dropdown render:", {
+                                                totalGroups: groups.length,
+                                                currentGroupId,
+                                                selectedGroup,
+                                                isDisabled: loadingFirst || loadingSecond || loadingThird || loadingFourth,
+                                                loadingStates: { loadingFirst, loadingSecond, loadingThird, loadingFourth }
+                                            });
+                                            return selectedGroup;
+                                        })()}
                                         onChange={handleGroupsChange}
                                         options={groups}
-                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading ..." : " Groups..."}
+                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading..." : "Select Group"}
+                                        isClearable
                                         size="sm"
                                         menuPortalTarget={document.body}
                                         menuPosition="fixed"
@@ -1445,17 +1508,31 @@ export default function CascadingOrgUnitPicker({
                                     <Text ml={2} fontSize="xs">Loading...</Text>
                                 </Flex>
                             ) : (
-                                    <Select<GroupFromSet, true, GroupBase<GroupFromSet>>
-                                        isMulti
+                                    <Select<GroupFromSet, false, GroupBase<GroupFromSet>>
                                         isDisabled={loadingFirst || loadingSecond || loadingThird || loadingFourth}
-                                        value={groupsFromSet.filter((group) =>
-                                            selectedGroups.indexOf(group.id) !== -1
-                                        )}
+                                        value={(() => {
+                                            const currentGroupId = selectedGroups[0];
+                                            const selectedGroup = groupsFromSet.find(g => g.id === currentGroupId) || null;
+                                            console.log("🎯 Groups from set dropdown render:", {
+                                                totalGroupsFromSet: groupsFromSet.length,
+                                                currentGroupId,
+                                                selectedGroup,
+                                                hasFullAccess,
+                                                showGroupSets,
+                                                selectedGroupSet,
+                                                isDisabled: loadingFirst || loadingSecond || loadingThird || loadingFourth,
+                                                loadingStates: { loadingFirst, loadingSecond, loadingThird, loadingFourth }
+                                            });
+                                            return selectedGroup;
+                                        })()}
                                         onChange={handleGroupsFromSetChange}
+                                        onMenuOpen={() => console.log("🔽 Groups dropdown menu opened")}
+                                        onMenuClose={() => console.log("🔼 Groups dropdown menu closed")}
                                         options={groupsFromSet}
                                         getOptionLabel={(option) => option.name}
                                         getOptionValue={(option) => option.id}
-                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading..." : "Groups..."}
+                                        placeholder={loadingFirst || loadingSecond || loadingThird || loadingFourth ? "Loading..." : "Select Group"}
+                                        isClearable
                                         size="sm"
                                         menuPortalTarget={document.body}
                                         menuPosition="fixed"
@@ -1670,14 +1747,14 @@ export default function CascadingOrgUnitPicker({
                                                 control: (base) => ({
                                                     ...base,
                                                     minHeight: "28px",
-                                                    backgroundColor: lockedLevels.level3 ? "#f5f5f5" : 
+                                                    backgroundColor: lockedLevels.level3 ? "#f5f5f5" :
                                                         selectedThirdLevel ? "#e0f2fe" : "#f0f9ff", // Light blue by default
                                                     border: selectedThirdLevel ? "1px solid #0284c7" : "1px solid #0ea5e9", // Blue border by default
                                                     opacity: lockedLevels.level3 ? 0.6 : 1,
                                                     cursor: lockedLevels.level3 ? "not-allowed" : "pointer",
                                                     fontSize: "13px",
                                                     "&:hover": {
-                                                        borderColor: lockedLevels.level3 ? "#d0d0d0" : 
+                                                        borderColor: lockedLevels.level3 ? "#d0d0d0" :
                                                             selectedThirdLevel ? "#0284c7" : "#0284c7" // Blue on hover by default
                                                     }
                                                 }),
@@ -1741,14 +1818,14 @@ export default function CascadingOrgUnitPicker({
                                                 control: (base) => ({
                                                     ...base,
                                                     minHeight: "28px",
-                                                    backgroundColor: lockedLevels.level4 ? "#f5f5f5" : 
+                                                    backgroundColor: lockedLevels.level4 ? "#f5f5f5" :
                                                         selectedFourthLevel ? "#e0f2fe" : "#f0f9ff", // Light blue by default
                                                     border: selectedFourthLevel ? "1px solid #0284c7" : "1px solid #0ea5e9", // Blue border by default
                                                     opacity: lockedLevels.level4 ? 0.6 : 1,
                                                     cursor: lockedLevels.level4 ? "not-allowed" : "pointer",
                                                     fontSize: "13px",
                                                     "&:hover": {
-                                                        borderColor: lockedLevels.level4 ? "#d0d0d0" : 
+                                                        borderColor: lockedLevels.level4 ? "#d0d0d0" :
                                                             selectedFourthLevel ? "#0284c7" : "#0284c7" // Blue on hover by default
                                                     }
                                                 }),
@@ -1801,14 +1878,14 @@ export default function CascadingOrgUnitPicker({
                                                 control: (base) => ({
                                                     ...base,
                                                     minHeight: "28px",
-                                                    backgroundColor: lockedLevels.level5 ? "#f5f5f5" : 
+                                                    backgroundColor: lockedLevels.level5 ? "#f5f5f5" :
                                                         selectedFifthLevel ? "#e0f2fe" : "#f0f9ff", // Light blue by default
                                                     border: selectedFifthLevel ? "1px solid #0284c7" : "1px solid #0ea5e9", // Blue border by default
                                                     opacity: lockedLevels.level5 ? 0.6 : 1,
                                                     cursor: lockedLevels.level5 ? "not-allowed" : "pointer",
                                                     fontSize: "13px",
-                                                    "&:hover": { 
-                                                        borderColor: lockedLevels.level5 ? "#d0d0d0" : 
+                                                    "&:hover": {
+                                                        borderColor: lockedLevels.level5 ? "#d0d0d0" :
                                                             selectedFifthLevel ? "#0284c7" : "#0284c7" // Blue on hover by default
                                                     },
                                                 }),

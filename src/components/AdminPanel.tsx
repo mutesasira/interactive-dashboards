@@ -56,20 +56,16 @@ export default function AdminPanel() {
 
         // Test basic server connectivity first
         try {
-            console.log("🔍 Testing server connectivity...");
             const testQuery = await engine.query({
                 test: {
                     resource: "me",
                 }
             });
-            console.log("✅ Server is responsive:", testQuery);
         } catch (testError) {
-            console.log("❌ Server connectivity test failed:", testError);
         }
 
         // // Test dataStore with a simple test object first
         // try {
-        //     console.log("🧪 Testing basic dataStore functionality...");
         //     const testData = { id: "test", name: "test", timestamp: Date.now() };
         //     await saveDocument(
         //         settings.storage,
@@ -79,14 +75,10 @@ export default function AdminPanel() {
         //         engine,
         //         "create"
         //     );
-        //     console.log("✅ DataStore test successful - dataStore is working");
         // } catch (testError) {
-        //     console.log("❌ DataStore test failed:", testError);
-        //     console.log("This confirms dataStore has issues on the server");
         // }
 
         try {
-            console.log("💾 Attempting dashboard save...");
             await saveDocument(
                 settings.storage,
                 "i-dashboards",
@@ -95,21 +87,17 @@ export default function AdminPanel() {
                 engine,
                 search.action || "create"
             );
-            console.log("✅ Dashboard save successful!");
         } catch (error) {
-            console.log("❌ Dashboard save failed:", error);
-            console.log("Error details:", {
+            console.error("Error saving dashboard:", {
                 message: error.message,
                 status: error.status,
                 statusText: error.statusText
             });
 
             // Try alternative approaches
-            console.log("🔄 Trying alternative save strategies...");
 
             // Strategy 1: Try with "update" instead of "create"
             try {
-                console.log("📝 Attempting save with 'update' action...");
                 await saveDocument(
                     settings.storage,
                     "i-dashboards",
@@ -118,15 +106,12 @@ export default function AdminPanel() {
                     engine,
                     "update"
                 );
-                console.log("✅ Update save successful!");
                 return; // Exit successfully if update works
             } catch (updateError) {
-                console.log("❌ Update save also failed:", updateError);
             }
 
             // Strategy 2: Try saving to a different namespace temporarily
             try {
-                console.log("📝 Attempting save to backup namespace...");
                 await saveDocument(
                     settings.storage,
                     "i-dashboards-backup",
@@ -135,11 +120,8 @@ export default function AdminPanel() {
                     engine,
                     "create"
                 );
-                console.log("✅ Backup namespace save successful!");
-                console.log("⚠️ Dashboard saved to backup namespace. You may need to manually migrate it later.");
                 return; // Exit successfully if backup works
             } catch (backupError) {
-                console.log("❌ Backup namespace save also failed:", backupError);
             }
 
             throw error;

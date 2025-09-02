@@ -126,14 +126,6 @@ const BarGraphProperties = ({
   const dimensionValues = selectedDimensionField ? getDimensionValues(selectedDimensionField) : [];
 
   // Debug logging
-  console.log('BarGraph visualization indicators:', visualization.indicators);
-  console.log('BarGraph visualization data sample:', visualizationData.slice(0, 3));
-  console.log('BarGraph series field:', visualization.properties["series"]);
-  console.log('BarGraph category field:', visualization.properties["category"]);
-  console.log('BarGraph series options:', findUniqValue(visualizationData, visualization.properties["series"]));
-  console.log('BarGraph available columns:', columns);
-  console.log('BarGraph calculation options:', calculationOptions);
-  console.log('BarGraph dimension values for', selectedDimensionField, ':', dimensionValues);
 
   const specificValues: string[] = visualization.properties["specific"] || [];
 

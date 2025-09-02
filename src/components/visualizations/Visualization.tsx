@@ -409,11 +409,8 @@ const Visualization = ({
         if (visualization.expression) {
             // Combine both data sources for more reliable computed values
             const combinedData = { ...calculated, ...data };
-            console.log("Computing values from combined data:", combinedData);
-            console.log("Expression:", visualization.expression);
             
             const derived = deriveSingleValues(combinedData, visualization.expression);
-            console.log("Computed result:", derived);
             setDerivedValue(() => derived);
         }
     }, [data, calculated, visualization.expression]);

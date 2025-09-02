@@ -31,7 +31,6 @@ const GaugeChartProperties = ({
             <Checkbox
                 isChecked={visualization.showTitle}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    console.log(e.target.checked);
 
                     sectionApi.changeVisualizationAttribute({
                         visualization: visualization.id,

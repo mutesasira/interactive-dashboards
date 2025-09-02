@@ -12,7 +12,6 @@ export default function ReactErrorBoundary({
             FallbackComponent={ErrorPage}
             onError={(error, errorInfo) => {
                 // log the error
-                console.log("Error caught!");
                 console.error(error);
                 console.error(errorInfo);
             }}

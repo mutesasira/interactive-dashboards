@@ -479,9 +479,6 @@ const BarGraph = ({
 
     // Add third axis line series if enabled
     if (thirdAxisEnabled && categories.length > 0) {
-      console.log('Creating third axis line with source type:', thirdAxisDataSource);
-      console.log('Categories:', categories);
-      console.log('Raw visualization data:', visualizationData);
       
       // Extract line data based on the selected data source type
       const lineData = categories.map(category => {
@@ -496,7 +493,6 @@ const BarGraph = ({
           return categoryValue === category;
         });
         
-        console.log(`Category: ${category}, Found data points:`, dataPoints);
         
         if (dataPoints.length === 0) return 0;
         
@@ -505,17 +501,14 @@ const BarGraph = ({
           case 'direct':
             if (!thirdAxisDataField) return 0;
             
-            console.log(`Looking for direct field '${thirdAxisDataField}' in data points:`, dataPoints);
             
             // Try multiple approaches to find the value
             for (const point of dataPoints) {
-              console.log(`Checking point:`, point);
               
               // 1. Direct field access
               if (point[thirdAxisDataField] !== undefined) {
                 const value = point[thirdAxisDataField];
                 const numValue = typeof value === 'number' ? value : Number(value);
-                console.log(`Direct field value for ${category}:`, value, '-> parsed:', numValue);
                 return isNaN(numValue) ? 0 : numValue;
               }
               
@@ -524,7 +517,6 @@ const BarGraph = ({
               if (seriesValue === thirdAxisDataField && point.value !== undefined) {
                 const value = point.value;
                 const numValue = typeof value === 'number' ? value : Number(value);
-                console.log(`Series-based value for ${category}:`, value, '-> parsed:', numValue);
                 return isNaN(numValue) ? 0 : numValue;
               }
               
@@ -537,13 +529,11 @@ const BarGraph = ({
                 
                 if (indicatorValue !== undefined) {
                   const numValue = typeof indicatorValue === 'number' ? indicatorValue : Number(indicatorValue);
-                  console.log(`Indicator-based value for ${category}:`, indicatorValue, '-> parsed:', numValue);
                   return isNaN(numValue) ? 0 : numValue;
                 }
               }
             }
             
-            console.log(`No direct field value found for ${category} with field ${thirdAxisDataField}`);
             break;
             
           case 'dimension':
@@ -557,7 +547,6 @@ const BarGraph = ({
             if (dimensionPoint && dimensionPoint.value !== undefined) {
               const value = dimensionPoint.value;
               const numValue = typeof value === 'number' ? value : Number(value);
-              console.log(`Dimension value for ${category}:`, value);
               return isNaN(numValue) ? 0 : numValue;
             }
             break;
@@ -590,18 +579,15 @@ const BarGraph = ({
               
               if (!isNaN(numeratorValue) && !isNaN(denominatorValue) && denominatorValue !== 0) {
                 const percentage = (numeratorValue / denominatorValue) * 100;
-                console.log(`Calculated percentage for ${category}: ${numeratorValue}/${denominatorValue}*100 = ${percentage}`);
                 return percentage;
               }
             }
             break;
         }
         
-        console.log(`No value found for category: ${category}`);
         return 0;
       });
       
-      console.log('Final line data:', lineData);
 
       // Format line values
       const formatLineValue = (value: any) => {

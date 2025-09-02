@@ -58,7 +58,6 @@ const OrgUnitTree = ({ onChange, value }: OrgUnitTreeProps) => {
             });
             await db.organisations.bulkPut(flatten(found));
         } catch (e) {
-            console.log(e);
         }
     };
     const onTreeExpand = async (expandedKeys: React.Key[]) => {

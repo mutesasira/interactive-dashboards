@@ -381,7 +381,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     const { visualizations, sections, metadata } = dashboardData;
     const insights: AIInsight[] = [];
     
-    console.log('Generating fallback insights for', visualizations.length, 'visualizations across', metadata.totalSections, 'sections');
     
     // First, analyze by sections if available
     if (sections && sections.length > 0) {
@@ -398,17 +397,13 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     }
     
     // Analyze ALL visualizations, not just a few
-    console.log('Analyzing ALL visualizations...');
     for (const viz of visualizations) {
-      console.log(`Analyzing viz: ${viz.title} (Section: ${viz.sectionTitle}), type: ${viz.type}, data length: ${viz.data?.length}`);
       
       if (viz.data && viz.data.length > 0) {
-        console.log('Sample data:', viz.data.slice(0, 2));
       }
       
       const dataInsight = this.analyzeVisualizationData(viz);
       if (dataInsight) {
-        console.log('Generated insight:', dataInsight.title);
         insights.push(dataInsight);
         
         // Limit to top 8 insights to avoid overwhelming
@@ -436,7 +431,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
       });
     }
     
-    console.log('Generated', insights.length, 'fallback insights');
     return insights;
   }
   
@@ -484,7 +478,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
    * Analyze patterns using section titles and organization
    */
   private analyzeSectionBasedPatterns(sections: any[]): AIInsight | null {
-    console.log('Analyzing section-based patterns for', sections.length, 'sections');
     
     // Group sections by theme/category based on titles
     const sectionCategories = this.categorizeSections(sections);
@@ -546,14 +539,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
       }
     });
     
-    console.log('Section categorization:', {
-      infrastructure: categories.infrastructure.map(s => s.title),
-      enrollment: categories.enrollment.map(s => s.title),
-      performance: categories.performance.map(s => s.title),
-      resources: categories.resources.map(s => s.title),
-      other: categories.other.map(s => s.title)
-    });
-    
     return categories;
   }
   
@@ -585,13 +570,11 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
    * Analyze patterns across multiple sections/visualizations
    */
   private analyzeCrossSectionPatterns(visualizations: any[]): AIInsight | null {
-    console.log('Analyzing cross-section patterns across', visualizations.length, 'visualizations');
     
     // Separate single values from multi-data visualizations
     const singleValues = visualizations.filter(viz => viz.type === 'single' && viz.data?.length === 1);
     const multiData = visualizations.filter(viz => viz.data?.length > 1);
     
-    console.log('Found', singleValues.length, 'single values and', multiData.length, 'multi-data vizs');
     
     if (singleValues.length >= 3) {
       // Analyze infrastructure metrics together
@@ -633,7 +616,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
     if (!viz.data || viz.data.length === 0) return null;
     
     try {
-      console.log(`Analyzing ${viz.title} (${viz.type}):`, viz.data);
       
       // For bar charts and multi-data visualizations, look for patterns
       if (viz.type === 'bar' || viz.data.length > 1) {
@@ -744,7 +726,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
   private findGenderPatterns(viz: any): AIInsight | null {
     const data = viz.data;
     
-    console.log('Looking for gender patterns in', viz.title);
     
     // Look for male/female data - check all fields
     const genderData = data.filter((item: any) => {
@@ -754,21 +735,18 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
                        allText.includes('men') || allText.includes('women');
       
       if (hasGender) {
-        console.log('Found gender data:', item);
       }
       
       return hasGender;
     });
     
     if (genderData.length > 1) {
-      console.log('Processing', genderData.length, 'gender data items');
       
       // Find regions/locations - use 'ou-name' field from your data
       const regions = [...new Set(genderData.map((item: any) => 
         item['ou-name'] || item.orgUnit || item.region || item.location || item.name || 'Unknown'
       ))];
       
-      console.log('Found regions:', regions);
       
       if (regions.length > 1) {
         // Calculate gender gaps using your data structure
@@ -777,7 +755,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
             (item['ou-name'] || item.orgUnit || item.region || item.location || item.name) === region
           );
           
-          console.log(`Region ${region} data:`, regionData);
           
           const maleData = regionData.find((item: any) => 
             (item['qtoZUWBbhtd-name'] || '').toLowerCase().includes('male') && 
@@ -791,7 +768,6 @@ Focus on finding hidden patterns that only become visible when analyzing multipl
           const maleTotal = maleData?.value || 0;
           const femaleTotal = femaleData?.value || 0;
           
-          console.log(`${region}: Male=${maleTotal}, Female=${femaleTotal}`);
           
           return {
             region,

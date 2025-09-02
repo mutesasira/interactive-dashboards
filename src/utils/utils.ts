@@ -787,9 +787,6 @@ export const deriveSingleValues = (
     let finalExpression = expression;
     const all = expression.match(/#{\w+.?\w*}/g);
     
-    console.log("deriveSingleValues - Expression:", expression);
-    console.log("deriveSingleValues - Available data keys:", Object.keys(data));
-    console.log("deriveSingleValues - Variables found:", all);
     
     if (all) {
       all.forEach((s) => {
@@ -812,16 +809,13 @@ export const deriveSingleValues = (
         const numericVal = parseFloat(String(val));
         const finalVal = isNaN(numericVal) ? 0 : numericVal;
         
-        console.log(`Replacing '${s}' with '${finalVal}' (original: ${val})`);
         finalExpression = finalExpression.replace(s, String(finalVal));
       });
     }
     
-    console.log("deriveSingleValues - Final expression:", finalExpression);
     
     try {
       const evaluation = evaluate(finalExpression);
-      console.log("deriveSingleValues - Evaluation result:", evaluation);
       return [{ value: evaluation }];
     } catch (error) {
       console.error("deriveSingleValues - Evaluation error:", error);

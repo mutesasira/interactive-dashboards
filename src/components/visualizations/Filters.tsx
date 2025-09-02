@@ -131,7 +131,7 @@ export default function Filters({
                       <DefaultOrgUnitFilter />
                     </div>,
                     <div key={i}>
-                      <CascadingOrgUnitPicker />
+                      <CascadingOrgUnitPicker showGroups={true} />
                     </div>
                   ];
                 }
@@ -247,7 +247,7 @@ export default function Filters({
           return [<OrgUnitPicker key={i} />];
         }
         if (i === "cascading-organisations") {
-          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} />];
+          return [<DefaultOrgUnitFilter key="default-org-filter" />, <CascadingOrgUnitPicker key={i} showGroups={true} />];
         }
         if (i === "default-org-unit-filter") {
           return [<DefaultOrgUnitFilter key={i} />];

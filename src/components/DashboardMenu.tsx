@@ -101,7 +101,6 @@ const DashboardMenu = () => {
     const categoryOptions = useStore($categoryOptions);
     const [loading, setLoading] = useState<boolean>(false);
     const [isNotDesktop] = useMediaQuery(["(max-width: 992px)"]);
-    console.log("DashboardMenu", dashboard);
     const updateDashboard = async (data: any) => {
         setLoading(true);
         await saveDocument(

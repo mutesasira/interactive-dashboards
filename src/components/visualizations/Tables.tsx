@@ -306,8 +306,6 @@ const Tables = ({ visualization, data, dimensions, others }: ChartProps) => {
     const workbook = new Workbook();
     const worksheet = workbook.addWorksheet("Table Data");
 
-    console.log("Maybe Available columns:", available);
-    console.log("Data i need:", initial.finalData[0]);
 
     const headerRow = available
       .map((col, index) => {
@@ -329,7 +327,6 @@ const Tables = ({ visualization, data, dimensions, others }: ChartProps) => {
       .flat();
     worksheet.addRow(secondRow);
 
-    console.log(initial.finalColumns)
 
     const specialColumns: string[] = columns
       .filter((c) => SPECIAL_COLUMNS.indexOf(c) !== -1)

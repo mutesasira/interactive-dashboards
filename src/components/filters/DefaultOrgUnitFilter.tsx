@@ -12,7 +12,6 @@ import { db } from "../../db";
     await db.organisations.clear();
     localStorage.removeItem("ou-cache-owner");
     localStorage.removeItem("has-user-logged-in");
-    console.log("Cache cleared! Please refresh the page.");
 };
 
 interface DefaultOption {
@@ -30,7 +29,6 @@ export default function DefaultOrgUnitFilter({ isDisabled = false }: DefaultOrgU
     const engine = useDataEngine();
     const store = useStore($store);
     
-    console.log("DefaultOrgUnitFilter rendering...");
     
     const [defaultOption, setDefaultOption] = useState<DefaultOption | null>(null);
     const [loading, setLoading] = useState(false);
@@ -61,7 +59,6 @@ export default function DefaultOrgUnitFilter({ isDisabled = false }: DefaultOrgU
             const userOrgUnits = await db.organisations.toArray();
             
             if (!userOrgUnits || userOrgUnits.length === 0) {
-                console.log("No user org units available for default filter");
                 setLoading(false);
                 return;
             }
@@ -91,7 +88,6 @@ export default function DefaultOrgUnitFilter({ isDisabled = false }: DefaultOrgU
 
             if (broadAccess) {
                 // Admin/broad access users: Default to country level (level 1)
-                console.log("Setting default country-level filter for admin/broad access user");
                 try {
                     const response: any = await engine.query({
                         countryLevel: {
@@ -113,7 +109,6 @@ export default function DefaultOrgUnitFilter({ isDisabled = false }: DefaultOrgU
                             id: countryUnit.id,
                             level: 1
                         };
-                        console.log(`Set default country filter: ${countryUnit.name}`);
                     }
                 } catch (error) {
                     console.warn("Failed to load country level unit:", error);
@@ -129,7 +124,6 @@ export default function DefaultOrgUnitFilter({ isDisabled = false }: DefaultOrgU
                         id: (highestLevelUnit as any).id,
                         level: (highestLevelUnit as any).level
                     };
-                    console.log(`Set default filter to user's highest level: ${defaultUnit.label} (Level ${defaultUnit.level})`);
                 }
             }
 
@@ -177,7 +171,6 @@ export default function DefaultOrgUnitFilter({ isDisabled = false }: DefaultOrgU
         const checkAndReestablishDefault = async () => {
             // If no organisations are selected and we have a default, re-apply it
             if (store.organisations && store.organisations.length === 0 && defaultOption && !loading) {
-                console.log("No organisations selected, re-establishing default filter");
                 try {
                     storeApi?.setOrganisations?.([defaultOption.id]);
                     storeApi.setSelectedOrgUnitName?.(defaultOption.label);

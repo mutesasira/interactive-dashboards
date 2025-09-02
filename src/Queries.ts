@@ -191,7 +191,6 @@ export const getDHIS2Index = async <TData>(
     const response: any = await engine.query(query);
     return Object.values<TData>(response);
   } catch (error) {
-    console.log(error);
   }
   return [];
 };
@@ -1319,19 +1318,56 @@ export const findLevelsAndOus = (indicator: IIndicator2 | undefined) => {
 const makeDHIS2Query = (
   data: IData2,
   globalFilters: { [key: string]: any } = {},
-  overrides: { [key: string]: any } = {}
+  _overrides: { [key: string]: any } = {}
 ) => {
+  console.log("🔍 makeDHIS2Query called with:", { globalFilters, dataDimensions: data.dataDimensions });
+  
   const filtered = fromPairs(
     Object.entries(data.dataDimensions).filter(
-      ([id, dimension]) => dimension.type && dimension.dimension
+      ([_, dimension]) => dimension.type && dimension.dimension
     )
   );
   const allDimensions = findDimension(filtered, globalFilters);
+  console.log("📋 All dimensions found:", allDimensions);
 
-  const final = Object.entries(
-    groupBy(allDimensions, (v) => `${v.type}${v.dimension}`)
+  // Special handling for OU dimension - combine OU, OU_GROUP, and LEVEL items
+  const ouItems: string[] = [];
+  const nonOuDimensions: any[] = [];
+
+  allDimensions.forEach((dim) => {
+    if (dim.dimension === "ou" && (dim.type === "dimension" || dim.type === "filter")) {
+      console.log("➕ Adding OU dimension item:", dim.value);
+      ouItems.push(...dim.value.split(";"));
+    } else if (dim.resource === "oul" || dim.resource === "oug") {
+      console.log("➕ Adding OU level/group item:", dim.value);
+      ouItems.push(...dim.value.split(";"));
+    } else {
+      nonOuDimensions.push(dim);
+    }
+  });
+
+  // Also include items from global store
+  if (globalFilters.organisations) {
+    console.log("🌍 Adding organizations from global store:", globalFilters.organisations);
+    ouItems.push(...globalFilters.organisations);
+  }
+  if (globalFilters.levels) {
+    console.log("🌍 Adding levels from global store:", globalFilters.levels);
+    ouItems.push(...globalFilters.levels.map((l: string) => `LEVEL-${l}`));
+  }
+  if (globalFilters.groups) {
+    console.log("🌍 Adding groups from global store:", globalFilters.groups);
+    ouItems.push(...globalFilters.groups.map((g: string) => `OU_GROUP-${g}`));
+  }
+
+  console.log("📦 Collected OU items:", ouItems);
+  console.log("📦 Non-OU dimensions:", nonOuDimensions);
+
+  // Process non-OU dimensions normally
+  const nonOuParams = Object.entries(
+    groupBy(nonOuDimensions, (v) => `${v.type}${v.dimension}`)
   )
-    .flatMap(([x, y]) => {
+    .flatMap(([_, y]) => {
       const first = y[0];
       const finalValues = y.map(({ value }) => value).join(";");
       if (y) {
@@ -1341,9 +1377,44 @@ const makeDHIS2Query = (
         return [`${first.type}=${first.dimension}:${finalValues}`];
       }
       return [];
-    })
-    .join("&");
-  return final;
+    });
+
+  // Build final combined parameters
+  const finalParams = [...nonOuParams];
+
+  // Add combined OU dimension if we have items
+  if (ouItems.length > 0) {
+    const uniqueOuItems = Array.from(new Set(ouItems)).filter(Boolean);
+    console.log("🔗 Unique OU items:", uniqueOuItems);
+    
+    if (uniqueOuItems.length > 0) {
+      // Use dimension=ou for groups and level-based filters, filter=ou for specific org units
+      const hasGroups = uniqueOuItems.some(item => item.startsWith('OU_GROUP-'));
+      const hasLevels = uniqueOuItems.some(item => item.startsWith('LEVEL-'));
+      
+      console.log("🏷️ OU analysis:", { hasGroups, hasLevels });
+      
+      if (hasGroups || hasLevels) {
+        const ouParam = `dimension=ou:${uniqueOuItems.join(";")}`;
+        console.log("✅ Adding dimension OU param:", ouParam);
+        finalParams.push(ouParam);
+      } else {
+        const ouParam = `filter=ou:${uniqueOuItems.join(";")}`;
+        console.log("✅ Adding filter OU param:", ouParam);
+        finalParams.push(ouParam);
+      }
+    }
+  } else if (globalFilters.groups && globalFilters.groups.length > 0) {
+    // Special case: If we only have groups and no other OU items, ensure we have the groups in the dimension
+    const groupTokens = globalFilters.groups.map((g: string) => `OU_GROUP-${g}`);
+    const ouParam = `dimension=ou:${groupTokens.join(";")}`;
+    console.log("⚠️ Special case - only groups found, adding:", ouParam);
+    finalParams.push(ouParam);
+  }
+
+  const finalQuery = finalParams.join("&");
+  console.log("🎯 Final query:", finalQuery);
+  return finalQuery;
 };
 
 const makeSQLViewsQueries = (
@@ -1643,12 +1714,10 @@ const computeIndicator = (
   denominatorValue: string
 ) => {
   if (indicator.custom && numeratorValue && denominatorValue) {
-    console.log(numeratorValue, denominatorValue);
     const expression = indicator.factor
       .replaceAll("x", numeratorValue)
       .replaceAll("y", denominatorValue);
     const evaluation = evaluate(expression);
-    console.log(expression);
     return {
       ...currentValue,
       value: evaluate(expression),
@@ -2140,7 +2209,6 @@ export const saveDocument = async <TData extends INamed>(
       resource: `dataStore/${index}/${document.id}`,
       data: document,
     };
-    console.log("mutation", mutation);
     const response = await engine.mutate(mutation);
     return response;
   }

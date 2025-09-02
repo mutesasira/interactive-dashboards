@@ -381,7 +381,6 @@ export default OUTree;
 //       })
 //       .then((res: any) => {
 //         if (cancelled) return;
-//         console.log("DHIS2 search response.units:", res.units);
 //         const list: Array<{ id: string; name: string; path: string }> =
 //           res.units.organisationUnits || [];
 //         setSearchResults(list);
@@ -415,7 +414,6 @@ export default OUTree;
 //             },
 //           },
 //         });
-//         console.log(`Loaded children for ${pid}:`, res.units);
 //         const parentUnits: any[] = res.units.organisationUnits || [];
 //         const toPut = parentUnits.flatMap((u) =>
 //           u.children.map((c: any) => ({
@@ -452,7 +450,6 @@ export default OUTree;
 //         },
 //       },
 //     });
-//     console.log(`Lazy‐loaded children for ${id}:`, res.units);
 //     const parentUnits: any[] = res.units.organisationUnits || [];
 //     const found = parentUnits.flatMap((u) =>
 //       u.children.map((c: any) => ({
