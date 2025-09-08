@@ -35,6 +35,7 @@ import {
     AiOutlineLineChart,
     AiOutlineNumber,
 } from "react-icons/ai";
+import { FaBrain } from "react-icons/fa";
 import { FaGlobeAfrica } from "react-icons/fa";
 import { dashboardApi, sectionApi } from "../../Events";
 import { ISection, LocationGenerics, Option } from "../../interfaces";
@@ -189,6 +190,18 @@ const VisualizationMenu = ({ section }: VisualizationMenuProps) => {
                         icon={<AiOutlineNumber />}
                     >
                         View as Single Value
+                    </MenuItem>
+                    <MenuItem
+                        fontSize="18px"
+                        onClick={() =>
+                            dashboardApi.changeVisualizationType({
+                                section,
+                                visualization: "insights2",
+                            })
+                        }
+                        icon={<FaBrain />}
+                    >
+                        View as AI Insights 2
                     </MenuItem>
                     {section.visualizations.map(
                         (visualization) =>

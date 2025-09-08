@@ -612,6 +612,7 @@ export const chartTypes: Option[] = [
   { value: "dhis2", label: "DHIS2 Visualization" },
   { value: "divider", label: "Divider" },
   { value: "insights", label: "Insights" },
+  { value: "insights2", label: "AI Insights 2" },
   { value: "multiTitleGauge", label: "Multi Title Gauge" },
 ];
 
@@ -627,6 +628,7 @@ export const donNotRequireQuery = [
   "divider",
   "categoryList",
   "insights",
+  "insights2",
 ];
 
 export const createOptions = (options: string[]): Option[] => {

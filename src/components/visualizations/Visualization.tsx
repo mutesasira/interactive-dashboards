@@ -51,6 +51,7 @@ import TreeMaps from "./TreeMaps";
 import DividerVisualization from "./DividerVisualization";
 import MicroPlanning from "./MicroPlanning";
 import InsightsVisualization from "./InsightsVisualization";
+import Insights2Visualization from "./Insights2Visualization";
 import MultiTitleGauge from "./MultiTitleGauge";
 
 type VisualizationProps = {
@@ -327,6 +328,16 @@ export const getVisualization = (
         divider: <DividerVisualization />,
         insights: (
             <InsightsVisualization
+                data={data}
+                section={section}
+                visualization={visualization}
+                {...otherProperties}
+                layoutProperties={layoutProperties}
+                dataProperties={dataProperties}
+            />
+        ),
+        insights2: (
+            <Insights2Visualization
                 data={data}
                 section={section}
                 visualization={visualization}

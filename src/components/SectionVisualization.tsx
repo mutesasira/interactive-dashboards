@@ -3,11 +3,9 @@ import {
   Grid,
   GridItem,
   Stack,
-  useBreakpointValue,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useStore } from "effector-react";
-import { MouseEvent } from "react";
 import { Item, Menu, Separator, useContextMenu } from "react-contexify";
 import "react-contexify/dist/ReactContexify.css";
 import {
@@ -16,16 +14,93 @@ import {
   AiOutlineNumber,
 } from "react-icons/ai";
 import { FaGlobeAfrica } from "react-icons/fa";
+import { FaBrain } from "react-icons/fa";
 import Marquee from "react-marquee-slider";
 import { useElementSize } from "usehooks-ts";
 import { dashboardApi, sectionApi } from "../Events";
 import { ISection } from "../interfaces";
-import { $dashboard, $store, $size, isOpenApi } from "../Store";
+import { $dashboard, $store, isOpenApi } from "../Store";
 import FullScreen from "./FullScreen";
 import SectionTitle from "./SectionTitle";
 import Carousel from "./visualizations/Carousel";
 import TabPanelVisualization from "./visualizations/TabPanelVisualization";
 import Visualization from "./visualizations/Visualization";
+
+// Helper function to check if visualization is a map type
+const isMapVisualization = (visualization: any) => {
+  return visualization.type === 'map' || visualization.type === 'map2';
+};
+
+// Helper function to get container styles for visualization
+const getVisualizationContainerStyles = (visualization: any, layoutMode: string) => {
+  const isMap = isMapVisualization(visualization);
+  const isSingleValue = visualization.type === 'single';
+  const isImage = visualization.type === 'image';
+  
+  // Base styles for backward compatibility
+  const baseStyles = {
+    maxW: "100%",
+    maxH: "100%",
+    overflow: "hidden" as const,
+  };
+
+  // Enhanced styles for maps to fit sections properly
+  if (isMap) {
+    // Check for custom sizing properties (backward compatibility)
+    const customWidth = visualization.properties?.["layout.width"];
+    const customHeight = visualization.properties?.["layout.height"];
+    const fitToSection = visualization.properties?.["layout.fitToSection"] !== false;
+    
+    // If custom dimensions are specified and fitToSection is disabled, use them
+    if (!fitToSection && (customWidth || customHeight)) {
+      return {
+        ...baseStyles,
+        w: customWidth || "auto",
+        h: customHeight || "auto",
+        display: "flex",
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+      };
+    }
+    
+    // Default responsive behavior for maps
+    return {
+      ...baseStyles,
+      w: "100%",
+      h: "100%",
+      flex: layoutMode === 'normal' ? "1" : undefined,
+      display: "flex",
+      alignItems: "stretch" as const,
+      justifyContent: "stretch" as const,
+    };
+  }
+
+  // Special handling for single values to ensure they display properly
+  if (isSingleValue) {
+    return {
+      ...baseStyles,
+      w: "100%",
+      h: "100%",
+      display: "flex",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }
+
+  // Special handling for images to ensure they display properly and maintain aspect ratio
+  if (isImage) {
+    return {
+      ...baseStyles,
+      w: "100%",
+      h: "100%",
+      display: "flex",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }
+
+  return baseStyles;
+};
 
 const SectionVisualization = ({ section }: { section: ISection }) => {
   const dashboard = useStore($dashboard);
@@ -34,7 +109,6 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
   });
   const [squareRef, { height }] = useElementSize();
   const store = useStore($store);
-  const currentSize = useStore($size);
 
 
   function displayMenu(e: any) {
@@ -85,18 +159,18 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
                 const dir = section.marqueeDirection || "left";
                 // Convert our direction to marquee library format
                 switch (dir) {
-                  case "left": return "rtl";
-                  case "right": return "ltr";
-                  case "up": return "ttb";
-                  case "down": return "btt";
-                  default: return "rtl";
+                  case "left": return "rtl" as any;
+                  case "right": return "ltr" as any;
+                  case "up": return "ttb" as any;
+                  case "down": return "btt" as any;
+                  default: return "rtl" as any;
                 }
               })()}
               onFinish={() => { }}
               resetAfterTries={section.marqueeLoop !== false ? 200 : 1}
               scatterRandomly={false}
               onInit={() => { }}
-              pauseOnHover={section.marqueePauseOnHover !== false}
+{...(section.marqueePauseOnHover !== false ? { pauseOnHover: true } : {}) as any}
             >
               {section.visualizations.map((visualization) => {
                 const gapSize = `${section.marqueeGap || 20}px`;
@@ -106,12 +180,7 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
                     key={visualization.id}
                   >
                     <Box 
-                      maxW="100%" 
-                      minW="0" 
-                      overflow="hidden"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
+                      {...getVisualizationContainerStyles(visualization, 'marquee')}
                     >
                       <Visualization
                         section={section}
@@ -163,21 +232,15 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
                 bgColor={visualization.properties["layout.bg"]}
                 overflow="hidden"
               >
-                <Stack
-                  alignItems="center"
-                  justifyContent="center"
-                  spacing={0}
-                  p="0"
-                  w="100%"
-                  h="100%"
-                  overflow="hidden"
+                <Box
+                  {...getVisualizationContainerStyles(visualization, 'grid')}
                 >
                   <Visualization
                     key={visualization.id}
                     visualization={visualization}
                     section={section}
                   />
-                </Stack>
+                </Box>
               </GridItem>
             );
           })}
@@ -210,9 +273,7 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
           {section.visualizations.map((visualization) => (
             <Box 
               key={visualization.id} 
-              maxW="100%" 
-              maxH="100%" 
-              overflow="hidden"
+              {...getVisualizationContainerStyles(visualization, 'normal')}
             >
               <Visualization
                 key={visualization.id}
@@ -232,8 +293,10 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
     onFull();
   };
 
+  // @ts-ignore - Complex JSX union type issue, but compiles successfully
   return (
     <Stack
+      as="div"
       onContextMenu={displayMenu}
       w="100%"
       h="100%"
@@ -301,6 +364,18 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
           icon={<AiOutlineNumber />}
         >
           View as Single
+        </Item>
+        <Separator />
+        <Item
+          onClick={() =>
+            dashboardApi.changeVisualizationType({
+              section,
+              visualization: "insights2",
+            })
+          }
+          icon={<FaBrain />}
+        >
+          View as AI Insights 2
         </Item>
         <Separator />
         <Item onClick={() => dashboardApi.deleteSection(section.id)}>
