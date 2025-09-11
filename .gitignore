@@ -5,3 +5,10 @@ src/locales
 build
 .DS_Store
 CLAUDE.md
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
