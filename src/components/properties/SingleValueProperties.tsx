@@ -504,6 +504,45 @@ const SingleValueProperties = ({
                 placeholder="e.g., 0px, 4px 8px"
             />
 
+            {/* Individual Container Margins */}
+            <Text fontWeight="bold" fontSize="sm" color="gray.600" mt={2}>Container Margins</Text>
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.container.marginTop"
+                title="Container Top Margin (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.container.marginRight"
+                title="Container Right Margin (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.container.marginBottom"
+                title="Container Bottom Margin (px)"
+            />
+
+            <NumberProperty
+                visualization={visualization}
+                min={0}
+                max={100}
+                step={1}
+                attribute="data.container.marginLeft"
+                title="Container Left Margin (px)"
+            />
+
             <NumberProperty
                 visualization={visualization}
                 min={0}
@@ -722,7 +761,7 @@ const SingleValueProperties = ({
             <NumberProperty
                 visualization={visualization}
                 min={0}
-                max={100}
+                max={1000}
                 step={1}
                 attribute="data.value.marginRight"
                 title="Value Right Margin (px)"

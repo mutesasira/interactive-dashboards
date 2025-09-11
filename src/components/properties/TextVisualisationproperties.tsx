@@ -26,6 +26,10 @@ export default function TextVisualisationProperties({
     const currentSize = (props["data.height"] as number) || 20;
     const currentWeight = (props["data.fontWeight"] as number) || 400;
     const currentAlign = (props["data.align"] as string) || "left";
+    const currentMarginTop = (props["data.marginTop"] as number) || 0;
+    const currentMarginRight = (props["data.marginRight"] as number) || 0;
+    const currentMarginBottom = (props["data.marginBottom"] as number) || 0;
+    const currentMarginLeft = (props["data.marginLeft"] as number) || 0;
 
     return (
         <Stack spacing={4}>
@@ -125,6 +129,107 @@ export default function TextVisualisationProperties({
                             {align.charAt(0).toUpperCase() + align.slice(1)}
                         </Button>
                     ))}
+                </Stack>
+            </Stack>
+
+            {/* 6) Margins */}
+            <Stack>
+                <Text>Margins (px)</Text>
+                
+                {/* Top Margin */}
+                <Stack>
+                    <Text fontSize="sm">Top</Text>
+                    <NumberInput
+                        value={currentMarginTop}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onChange={(_, val) =>
+                            sectionApi.changeVisualizationProperties({
+                                visualization: visualization.id,
+                                attribute: "data.marginTop",
+                                value: val,
+                            })
+                        }
+                    >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                        </NumberInputStepper>
+                    </NumberInput>
+                </Stack>
+
+                {/* Right Margin */}
+                <Stack>
+                    <Text fontSize="sm">Right</Text>
+                    <NumberInput
+                        value={currentMarginRight}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onChange={(_, val) =>
+                            sectionApi.changeVisualizationProperties({
+                                visualization: visualization.id,
+                                attribute: "data.marginRight",
+                                value: val,
+                            })
+                        }
+                    >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                        </NumberInputStepper>
+                    </NumberInput>
+                </Stack>
+
+                {/* Bottom Margin */}
+                <Stack>
+                    <Text fontSize="sm">Bottom</Text>
+                    <NumberInput
+                        value={currentMarginBottom}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onChange={(_, val) =>
+                            sectionApi.changeVisualizationProperties({
+                                visualization: visualization.id,
+                                attribute: "data.marginBottom",
+                                value: val,
+                            })
+                        }
+                    >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                        </NumberInputStepper>
+                    </NumberInput>
+                </Stack>
+
+                {/* Left Margin */}
+                <Stack>
+                    <Text fontSize="sm">Left</Text>
+                    <NumberInput
+                        value={currentMarginLeft}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onChange={(_, val) =>
+                            sectionApi.changeVisualizationProperties({
+                                visualization: visualization.id,
+                                attribute: "data.marginLeft",
+                                value: val,
+                            })
+                        }
+                    >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                        </NumberInputStepper>
+                    </NumberInput>
                 </Stack>
             </Stack>
         </Stack>

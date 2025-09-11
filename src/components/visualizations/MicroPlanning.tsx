@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { ChartProps } from "../../interfaces";
 import { useDataEngine } from "@dhis2/app-runtime";
-import { QueryClient, QueryClientProvider, useQuery } from "react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { processTable } from "../processors";
 import { color } from "html2canvas/dist/types/css/types/color";
 

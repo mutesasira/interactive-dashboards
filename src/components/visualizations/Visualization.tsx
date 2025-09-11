@@ -325,7 +325,15 @@ export const getVisualization = (
                 section={section}
             />
         ),
-        divider: <DividerVisualization />,
+        divider: (
+            <DividerVisualization 
+                visualization={visualization}
+                section={section}
+                {...otherProperties}
+                layoutProperties={layoutProperties}
+                dataProperties={dataProperties}
+            />
+        ),
         insights: (
             <InsightsVisualization
                 data={data}

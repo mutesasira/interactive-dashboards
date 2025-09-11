@@ -49,26 +49,49 @@ export default function TextVisualisation({ visualization }: ChartProps) {
     const fontSize = (props["data.height"] as number) || 20;
     const fontWeight = (props["data.fontWeight"] as number) || 400;
     const textAlign = (props["data.align"] as string) || "left";
+    const marginTop = (props["data.marginTop"] as number) || 0;
+    const marginRight = (props["data.marginRight"] as number) || 0;
+    const marginBottom = (props["data.marginBottom"] as number) || 0;
+    const marginLeft = (props["data.marginLeft"] as number) || 0;
 
     return (
         <Box
             w="100%"
+            h="100%"
             p={4}
-            /* no fixed height, so it will stretch to fit its content */
-            height="auto"
-            overflow="visible"    /* no scrolling unless you explicitly set maxH elsewhere */
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            overflow="hidden" // Hide scrollbars completely
+            sx={{
+                // Hide scrollbars in all browsers while still allowing scroll
+                '&::-webkit-scrollbar': { display: 'none' }, // Chrome, Safari, Edge
+                '-ms-overflow-style': 'none', // IE 
+                'scrollbar-width': 'none', // Firefox
+            }}
         >
-            <ChakraText
-                color={color}
-                fontSize={`${fontSize}px`}
-                fontWeight={fontWeight}
-                textAlign={textAlign as any}
-                whiteSpace="pre-wrap"
-                wordBreak="break-word"
-                overflowWrap="anywhere"
+            <Box
+                marginTop={`${marginTop}px`}
+                marginRight={`${marginRight}px`}
+                marginBottom={`${marginBottom}px`}
+                marginLeft={`${marginLeft}px`}
+                maxW="100%"
+                maxH="100%"
             >
-                {text}
-            </ChakraText>
+                <ChakraText
+                    color={color}
+                    fontSize={`${fontSize}px`}
+                    fontWeight={fontWeight}
+                    textAlign={textAlign as any}
+                    whiteSpace="pre-wrap"
+                    wordBreak="break-word"
+                    overflowWrap="anywhere"
+                    maxW="100%"
+                    maxH="100%"
+                >
+                    {text}
+                </ChakraText>
+            </Box>
         </Box>
     );
 }

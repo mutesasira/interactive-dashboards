@@ -115,6 +115,10 @@ const SingleValue = ({
   // Enhanced styling properties
   const containerPadding = dataProperties?.["data.container.padding"] ?? "4px";
   const containerMargin = dataProperties?.["data.container.margin"] ?? "0px";
+  const containerMarginTop = dataProperties?.["data.container.marginTop"] ?? 0;
+  const containerMarginRight = dataProperties?.["data.container.marginRight"] ?? 0;
+  const containerMarginBottom = dataProperties?.["data.container.marginBottom"] ?? 0;
+  const containerMarginLeft = dataProperties?.["data.container.marginLeft"] ?? 0;
   const borderRadius = dataProperties?.["data.container.borderRadius"] ?? "3px";
   const borderColor = dataProperties?.["data.container.borderColor"] ?? "transparent";
   const borderStyle = dataProperties?.["data.container.borderStyle"] ?? "solid";
@@ -223,13 +227,23 @@ const SingleValue = ({
 
   // Helper functions for advanced styling
   const getContainerStyle = () => {
+    // Build margin style - use custom margin if provided, otherwise use individual margins
+    const marginStyle = containerMargin && containerMargin !== "0px" ? {
+      margin: containerMargin
+    } : {
+      marginTop: `${containerMarginTop}px`,
+      marginRight: `${containerMarginRight}px`,
+      marginBottom: `${containerMarginBottom}px`,
+      marginLeft: `${containerMarginLeft}px`,
+    };
+
     const style: any = {
       padding: containerPadding,
-      margin: containerMargin,
       borderRadius: borderRadius,
       borderColor: borderColor,
       borderStyle: borderStyle,
       borderWidth: `${singleValueBorder}px`,
+      ...marginStyle,
     };
 
     // Apply gradient background

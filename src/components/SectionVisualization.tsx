@@ -35,7 +35,10 @@ const isMapVisualization = (visualization: any) => {
 const getVisualizationContainerStyles = (visualization: any, layoutMode: string) => {
   const isMap = isMapVisualization(visualization);
   const isSingleValue = visualization.type === 'single';
-  const isImage = visualization.type === 'image';
+  const isImage = visualization.type === 'imageVisualization';
+  const isText = visualization.type === 'text';
+  const isClock = visualization.type === 'clock';
+  const isDivider = visualization.type === 'divider';
   
   // Base styles for backward compatibility
   const baseStyles = {
@@ -89,6 +92,42 @@ const getVisualizationContainerStyles = (visualization: any, layoutMode: string)
 
   // Special handling for images to ensure they display properly and maintain aspect ratio
   if (isImage) {
+    return {
+      ...baseStyles,
+      w: "100%",
+      h: "100%",
+      display: "flex",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }
+
+  // Special handling for text visualizations to ensure they display centered
+  if (isText) {
+    return {
+      ...baseStyles,
+      w: "100%",
+      h: "100%",
+      display: "flex",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }
+
+  // Special handling for clock visualizations to ensure they display centered
+  if (isClock) {
+    return {
+      ...baseStyles,
+      w: "100%",
+      h: "100%",
+      display: "flex",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }
+
+  // Special handling for divider visualizations to ensure they display centered
+  if (isDivider) {
     return {
       ...baseStyles,
       w: "100%",
@@ -231,6 +270,9 @@ const SectionVisualization = ({ section }: { section: ISection }) => {
                 key={visualization.id}
                 bgColor={visualization.properties["layout.bg"]}
                 overflow="hidden"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
               >
                 <Box
                   {...getVisualizationContainerStyles(visualization, 'grid')}

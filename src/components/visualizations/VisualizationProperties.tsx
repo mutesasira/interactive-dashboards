@@ -24,7 +24,7 @@ import TextVisualisationProperties from "../properties/TextVisualisationproperti
 import DashboardTitleProperties from "../properties/DashboardTitleProperties";
 import { Stack } from "@chakra-ui/react";
 import DashboardListProperties from "../properties/DashboardListProperties";
-import DividerVisualization from "./DividerVisualization";
+import DividerProperties from "../properties/DividerProperties";
 import InsightsProperties from "../properties/InsightsProperties";
 import Insights2Properties from "../properties/Insights2Properties";
 import MultiTitleGaugeProperties from "../properties/MultiTitleGaugeProperties";
@@ -53,7 +53,7 @@ const VisualizationProperties = ({ visualization }: VizProps) => {
       tables: <TableProperties visualization={visualization} />,
       optionSet: <OptionSetProperties visualization={visualization} />,
       text: <TextVisualisationProperties visualization={visualization} />,
-      divider: <DividerVisualization />,
+      divider: <DividerProperties visualization={visualization} />,
       microPlanningDashboard: (
         <MicroPlanningProperties visualization={visualization} />
       ),

@@ -46,8 +46,10 @@ export default function ImageVisualization({
       src={src}
       alt="Image preview"
       bg={bg}
+      maxW="100%"
+      maxH="100%"
+      objectFit="contain"
       style={{
-        objectFit: "contain",
         maxWidth: `${width}%`,
         maxHeight: `${height}%`,
         width: "auto",

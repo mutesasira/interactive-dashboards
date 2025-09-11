@@ -23,7 +23,7 @@ export default function OrgUnitPicker() {
     const ref = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
-    useOutsideClick({ ref, handler: onClose });
+    useOutsideClick({ ref: ref as React.RefObject<HTMLDivElement>, handler: onClose });
 
     const selectedIds = store.organisations;
 
@@ -48,28 +48,61 @@ export default function OrgUnitPicker() {
             const buttonRect = buttonRef.current.getBoundingClientRect();
             const modalWidth = 500;
             const modalHeight = 400;
-            
+
             let top = buttonRect.bottom + 8;
             let left = buttonRect.left;
-            
+
             // Adjust if modal would go off the right edge of screen
             if (left + modalWidth > window.innerWidth) {
                 left = window.innerWidth - modalWidth - 16;
             }
-            
+
             // Adjust if modal would go off the bottom edge of screen
             if (top + modalHeight > window.innerHeight) {
                 top = buttonRect.top - modalHeight - 8;
             }
-            
+
             // Ensure minimum margins
             left = Math.max(16, left);
             top = Math.max(16, top);
-            
+
             return { top, left };
         }
         return { top: "50%", left: "50%" };
     };
+
+    // Extract badges and tooltips into variables to simplify the JSX and avoid complex union types
+    const visibleBadges: React.ReactNode[] = visibleNames.map((name, idx) => (
+        <Tooltip key={idx} label={name} hasArrow>
+            <Badge
+                colorScheme="blue"
+                variant="subtle"
+                px={2}
+                py={1}
+                mr={2}
+                maxW="120px"
+                whiteSpace="nowrap"
+                overflow="hidden"
+                textOverflow="ellipsis"
+            >
+                {name}
+            </Badge>
+        </Tooltip>
+    ));
+
+    const hiddenBadge = hasHidden ? (
+        <Tooltip label={hiddenTooltip} hasArrow>
+            <Badge
+                colorScheme="gray"
+                variant="outline"
+                px={2}
+                py={1}
+                title={hiddenTooltip}
+            >
+                +{hiddenNames.length} more
+            </Badge>
+        </Tooltip>
+    ) : null;
 
     return (
         <Stack position="relative" flex={1} spacing={1}>
@@ -94,37 +127,8 @@ export default function OrgUnitPicker() {
                     flex="1"
                     minW={0}
                 >
-                    {visibleNames.map((name, idx) => (
-                        <Tooltip key={idx} label={name} hasArrow>
-                            <Badge
-                                colorScheme="blue"
-                                variant="subtle"
-                                px={2}
-                                py={1}
-                                mr={2}
-                                maxW="120px"
-                                whiteSpace="nowrap"
-                                overflow="hidden"
-                                textOverflow="ellipsis"
-                            >
-                                {name}
-                            </Badge>
-                        </Tooltip>
-                    ))}
-
-                    {hasHidden && (
-                        <Tooltip label={hiddenTooltip} hasArrow>
-                            <Badge
-                                colorScheme="gray"
-                                variant="outline"
-                                px={2}
-                                py={1}
-                                title={hiddenTooltip}
-                            >
-                                +{hiddenNames.length} more
-                            </Badge>
-                        </Tooltip>
-                    )}
+                    {visibleBadges}
+                    {hiddenBadge}
                 </Flex>
             </Flex>
 

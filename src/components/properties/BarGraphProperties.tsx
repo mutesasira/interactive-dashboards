@@ -63,13 +63,13 @@ const BarGraphProperties = ({
   // Get unique values for dimension fields (like dx-name values)
   const getDimensionValues = (dimensionField: string): Option[] => {
     if (!dimensionField || !visualizationData.length) return [];
-    
+
     const uniqueValues = uniq(
       visualizationData
         .map(item => item[dimensionField])
         .filter(val => val && val !== '')
     );
-    
+
     return uniqueValues.map(value => ({
       label: value,
       value: value,
@@ -83,10 +83,10 @@ const BarGraphProperties = ({
       visualizationData,
       visualization.properties["series"]
     );
-    
+
     if (seriesOptions.length >= 2) {
       const calculations: Option[] = [];
-      
+
       // Create percentage calculations for all possible pairs
       for (let i = 0; i < seriesOptions.length; i++) {
         for (let j = 0; j < seriesOptions.length; j++) {
@@ -101,17 +101,17 @@ const BarGraphProperties = ({
           }
         }
       }
-      
+
       return calculations;
     }
-    
+
     return [];
   };
 
   // Combine all field options
   const dimensionOptions = columns.filter(col => col.label?.includes('-name') || col.label?.includes('name'));
   const calculationOptions = getCalculationOptions();
-  
+
   const allFieldOptions: Option[] = [
     ...columns,
     ...dataElementOptions,
@@ -973,7 +973,7 @@ const BarGraphProperties = ({
             title="Line Data Field"
             options={allFieldOptions}
           />
-          
+
           {/* Debug info for direct field */}
           {allFieldOptions.length > 0 && (
             <Text fontSize="xs" color="gray.600" mt={1}>
@@ -992,7 +992,7 @@ const BarGraphProperties = ({
             title="Dimension Field (e.g., dx-name)"
             options={dimensionOptions}
           />
-          
+
           {selectedDimensionField && dimensionValues.length > 0 && (
             <SelectProperty
               attribute="data.thirdAxis.dataElement"
